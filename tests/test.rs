@@ -1,7 +1,14 @@
 #[macro_use]
 extern crate rust_sql;
+
 #[macro_use]
 extern crate mysql;
+extern crate mio;
+use mio::{Token, EventLoop};
+
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 
 #[test]
 fn test_sql_connection(){
@@ -74,3 +81,30 @@ fn test_sql_connection(){
     assert_eq!(payments, selected_payments);
 
 }
+
+/*
+const SERVER: Token = Token(0);
+const CLIENT: Token = Token(1);
+
+#[test]
+fn test_mio_echo_server () {
+        debug!("Starting TEST_ECHO_SERVER");
+        let mut event_loop = EventLoop::new().unwrap();
+
+        let addr = localhost();
+        let srv = TcpListener::bind(&addr).unwrap();
+
+        info!("listen for connections");
+        event_loop.register(&srv, SERVER, EventSet::readable(),
+                            PollOpt::edge() | PollOpt::oneshot()).unwrap();
+
+        let sock = TcpStream::connect(&addr).unwrap();
+
+        // Connect to the server
+        event_loop.register(&sock, CLIENT, EventSet::writable(),
+                            PollOpt::edge() | PollOpt::oneshot()).unwrap();
+
+        // Start the event loop
+        event_loop.run(&mut Echo::new(srv, sock, vec!["foo", "bar"])).unwrap();
+}
+*/
