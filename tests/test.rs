@@ -4,7 +4,10 @@ extern crate rust_sql;
 #[macro_use]
 extern crate mysql;
 extern crate mio;
+extern crate eventual;
+
 use mio::{Token, EventLoop};
+use eventual::*;
 
 #[macro_use]
 extern crate log;
@@ -108,3 +111,27 @@ fn test_mio_echo_server () {
         event_loop.run(&mut Echo::new(srv, sock, vec!["foo", "bar"])).unwrap();
 }
 */
+
+#[test]
+fn test_eventual () {
+    // Run a computation in another thread
+    let future1 = Future::spawn(|| {
+        // Represents an expensive computation, but for now just return a
+        // number
+        42
+    });
+
+    // Run another computation
+    let future2 = Future::spawn(|| {
+        // Another expensive computation
+        18
+    });
+
+    let res = join((
+                       future1.map(|v| v * 2),
+                       future2.map(|v| v + 5)))
+        .and_then(|(v1, v2)| Ok(v1 - v2))
+        .await().unwrap();
+
+    assert_eq!(61, res);
+}
