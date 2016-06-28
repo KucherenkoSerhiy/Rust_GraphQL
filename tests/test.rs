@@ -5,18 +5,24 @@ extern crate rust_sql;
 extern crate mysql;
 extern crate mio;
 extern crate eventual;
-
-use mio::{Token, EventLoop};
-use eventual::*;
+#[macro_use]
+extern crate nom;
 
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 
+use rust_sql::*;
+use rust_sql::def::GraphQLPool;
+use mio::{Token, EventLoop};
+use eventual::*;
+use mysql as my;
+use std::fs::File;
+use std::path::Path;
+use std::io::prelude::*;
+
 #[test]
 fn test_sql_connection(){
-    use mysql as my;
-
     #[derive(Debug, PartialEq, Eq)]
     struct Payment {
         customer_id: i32,
@@ -134,4 +140,82 @@ fn test_eventual () {
         .await().unwrap();
 
     assert_eq!(61, res);
+}
+
+#[test]
+fn test_get_simple_data_from_db () {
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct User {
+        id: i32,
+        name: String
+    }
+
+    let mut graphQLPool = GraphQLPool::new(
+        "mysql://root:root@localhost:3306",
+        "/home/serhiy/Desktop/rust-sql/types"
+    );
+    let mut s = String::new();
+    graphQLPool.init_db_file.read_to_string(&mut s);
+
+    graphQLPool.pool.prep_exec(r"CREATE TEMPORARY TABLE tmp.user (
+                         id int not null,
+                         name text
+                     )", ()).unwrap();
+
+    let users = vec![
+        User { id: 1, name: "foo".into() },
+        User { id: 2, name: "bar".into() }
+    ];
+
+    for mut stmt in graphQLPool.pool.prepare(r"INSERT INTO tmp.user
+                                       (id, name)
+                                   VALUES
+                                       (:id, :name)").into_iter() {
+        for p in users.iter() {
+            stmt.execute(params!{
+                "id" => my::Value::from(p.id),
+                "name" => my::Value::from(&p.name),
+            }).unwrap();
+        }
+    }
+
+    let selected_users: Vec<User> =
+    graphQLPool.pool.prep_exec("SELECT * FROM tmp.user", ())
+        .map(|result| {
+            result.map(|x| x.unwrap()).map(|row| {
+                let (id, name) = my::from_row(row);
+                User {
+                    id: id,
+                    name: name,
+                }
+            }).collect()
+        }).unwrap();
+
+    assert_eq!(users, selected_users);
+
+
+    /*
+    let query =
+    "
+        {
+            user(id: '1') {
+                name
+            }
+        }
+    ";
+
+    let expected_answer =
+    "
+        {
+            'data': {
+                'user': {
+                    'name': 'foo'
+                }
+            }
+        }
+    "
+    ;
+    let answer = graphQLPool.graphql(query);
+    */
 }
