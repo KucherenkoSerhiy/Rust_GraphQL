@@ -12,17 +12,17 @@ extern crate nom;
 extern crate log;
 extern crate env_logger;
 
-use rust_sql::*;
+
 use rust_sql::def::GraphQLPool;
-use mio::{Token, EventLoop};
+//use mio::{Token, EventLoop};
 use eventual::*;
 use mysql as my;
-use std::fs::File;
-use std::path::Path;
+//use std::fs::File;
+//use std::path::Path;
 use std::io::prelude::*;
 
 #[test]
-fn test_sql_connection(){
+fn test_mysql_working(){
     #[derive(Debug, PartialEq, Eq)]
     struct Payment {
         customer_id: i32,
@@ -143,7 +143,7 @@ fn test_eventual () {
 }
 
 #[test]
-fn test_get_simple_data_from_db () {
+fn test_db_creation () {
 
     #[derive(Debug, PartialEq, Eq)]
     struct User {
@@ -151,14 +151,12 @@ fn test_get_simple_data_from_db () {
         name: String
     }
 
-    let mut graphQLPool = GraphQLPool::new(
+    let graph_ql_pool = GraphQLPool::new(
         "mysql://root:root@localhost:3306",
         "/home/serhiy/Desktop/rust-sql/types"
     );
-    let mut s = String::new();
-    graphQLPool.init_db_file.read_to_string(&mut s);
 
-    graphQLPool.pool.prep_exec(r"CREATE TEMPORARY TABLE tmp.user (
+    graph_ql_pool.pool.prep_exec(r"CREATE TEMPORARY TABLE tmp.user (
                          id int not null,
                          name text
                      )", ()).unwrap();
@@ -168,7 +166,7 @@ fn test_get_simple_data_from_db () {
         User { id: 2, name: "bar".into() }
     ];
 
-    for mut stmt in graphQLPool.pool.prepare(r"INSERT INTO tmp.user
+    for mut stmt in graph_ql_pool.pool.prepare(r"INSERT INTO tmp.user
                                        (id, name)
                                    VALUES
                                        (:id, :name)").into_iter() {
@@ -181,7 +179,7 @@ fn test_get_simple_data_from_db () {
     }
 
     let selected_users: Vec<User> =
-    graphQLPool.pool.prep_exec("SELECT * FROM tmp.user", ())
+    graph_ql_pool.pool.prep_exec("SELECT * FROM tmp.user", ())
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, name) = my::from_row(row);
@@ -193,8 +191,23 @@ fn test_get_simple_data_from_db () {
         }).unwrap();
 
     assert_eq!(users, selected_users);
+}
 
+#[test]
+fn test_db_table_creation_from_file(){
+    let mut graph_ql_pool = GraphQLPool::new(
+        "mysql://root:root@localhost:3306",
+        "/home/serhiy/Desktop/rust-sql/types"
+    );
+    let mut s = String::new();
+    graph_ql_pool.init_db_file.read_to_string(&mut s);
+    println!("{}", s);
+}
 
+#[test]
+fn test_get_object(){
+
+}
     /*
     let query =
     "
@@ -218,4 +231,3 @@ fn test_get_simple_data_from_db () {
     ;
     let answer = graphQLPool.graphql(query);
     */
-}
