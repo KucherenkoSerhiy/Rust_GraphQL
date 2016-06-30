@@ -294,7 +294,7 @@ fn test_db_table_creation_from_file(){
     println!("{}", s);
 
     assert_eq!(
-        key_value(&b"id: String"[..]),
+        key_value(&b"id = String;"[..]),
         //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
         IResult::Done(&b""[..], {("id", "String")})
     );
