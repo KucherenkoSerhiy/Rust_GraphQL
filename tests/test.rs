@@ -28,6 +28,7 @@ use mysql as my;
 use std::io::prelude::*;
 use std::str;
 use std::str::FromStr;
+use std::vec::Vec;
 
 use nom::{IResult,digit};
 use nom::IResult::*;
@@ -294,9 +295,24 @@ fn test_db_table_creation_from_file(){
     println!("{}", s);
 
     assert_eq!(
-        key_value(&b"id = String;"[..]),
+        key_value(&b"id : String
+                    "[..]),
         //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
         IResult::Done(&b""[..], {("id", "String")})
+    );
+
+    let res = IResult::Done(&b""[..], vec![
+        {("id", "String")},
+        {("name", "String")},
+        {("homePlanet", "String")}
+    ]);
+    assert_eq!(
+        attrs(&b"{
+                    id: String
+                    name: String
+                    homePlanet: String
+                 }"[..]),
+        res
     );
 }
 

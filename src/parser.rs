@@ -2,6 +2,7 @@ use nom::{IResult,not_line_ending, space, alphanumeric, multispace, digit};
 
 use std::str;
 use std::collections::HashMap;
+use std::vec::Vec;
 
 use def::*;
 
@@ -35,18 +36,28 @@ named!(pub key_value    <&[u8],(&str,&str)>,
   chain!(
     key: map_res!(alphanumeric, str::from_utf8) ~
          space?                            ~
-         tag!("=")                         ~
+         tag!(":")                         ~
          space?                            ~
     val: map_res!(
-           take_until_either!("\n;"),
+           take_until_either!(" \n"),
            str::from_utf8
          )                                 ~
          space?                            ~
-         chain!(
-           not_line_ending  ,
-           ||{}
-         ) ?                               ~
+         not_line_ending                   ~
          multispace?                       ,
     ||{(key, val)}
   )
+);
+
+named!(pub attrs <&[u8], Vec<(&str,&str)> >,
+    delimited!(
+        char!('{'),
+        //take_until_either!(" \n"),
+        many0!(chain!(
+                multispace?                      ~
+            result: key_value,
+            ||{result}
+        )),
+        char!('}')
+    )
 );

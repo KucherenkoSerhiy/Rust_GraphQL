@@ -1,23 +1,16 @@
-#[macro_use]
 use mysql;
 
-use std::fmt::Debug;
-use std::any::Any;
 use std::error::Error;
 use std::fs::File;
 use std::path::Path;
-use std::io::prelude::*;
-
-use parser::*;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct db_column <'T> {
-    pub name: &'T [u8],
-    pub db_type: &'T [u8]
+pub struct DbColumn <'t> {
+    pub name: &'t [u8],
+    pub db_type: &'t [u8]
 }
 
 pub struct GraphQLPool {
-    #[derive(Debug, PartialEq, Eq)]
     pub pool: mysql::Pool,
     pub init_db_file: File
 }
