@@ -1,7 +1,6 @@
-use nom::{IResult,not_line_ending, space, alphanumeric, multispace, digit};
+use nom::{not_line_ending, space, alphanumeric, multispace};
 
 use std::str;
-use std::collections::HashMap;
 use std::vec::Vec;
 
 use def::*;
@@ -29,9 +28,6 @@ OUTPUT
     )"
 */
 
-//alfanumeric
-named!(not_space, is_not!( " \t\r\n" ) );
-
 named!(pub key_value    <&[u8],(&str,&str)>,
   chain!(
     key: map_res!(alphanumeric, str::from_utf8) ~
@@ -54,10 +50,30 @@ named!(pub attrs <&[u8], Vec<(&str,&str)> >,
         char!('{'),
         //take_until_either!(" \n"),
         many0!(chain!(
-                multispace?                      ~
+            multispace?                      ~
             result: key_value,
             ||{result}
         )),
         char!('}')
     )
+);
+
+named!(pub table <(&str, Vec<(&str, &str)>)>,
+    chain!(
+        tag!("type")                         ~
+        space                                ~
+        name: map_res!(alphanumeric, str::from_utf8) ~
+        multispace?                          ~
+        cols: attrs,
+        || {(name, cols)}
+    )
+);
+
+named! (pub database < Vec <(&str, Vec<(&str, &str)>)> >,
+    many0!(chain!(
+        multispace?                          ~
+        res: table                           ~
+        multispace?,
+        ||{res}
+    ))
 );

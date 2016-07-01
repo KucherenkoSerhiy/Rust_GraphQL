@@ -14,7 +14,6 @@ extern crate env_logger;
 
 
 use rust_sql::def::*;
-#[macro_use]
 use rust_sql::parser::*;
 
 //use mio::{Token, EventLoop};
@@ -285,15 +284,7 @@ fn test_db_creation () {
 }
 
 #[test]
-fn test_db_table_creation_from_file(){
-    let mut graph_ql_pool = GraphQLPool::new(
-        "mysql://root:root@localhost:3306",
-        "/home/serhiy/Desktop/rust-sql/types"
-    );
-    let mut s = String::new();
-    graph_ql_pool.init_db_file.read_to_string(&mut s);
-    println!("{}", s);
-
+fn test_parser(){
     assert_eq!(
         key_value(&b"id : String
                     "[..]),
@@ -301,7 +292,7 @@ fn test_db_table_creation_from_file(){
         IResult::Done(&b""[..], {("id", "String")})
     );
 
-    let res = IResult::Done(&b""[..], vec![
+    let cols = IResult::Done(&b""[..], vec![
         {("id", "String")},
         {("name", "String")},
         {("homePlanet", "String")}
@@ -312,7 +303,62 @@ fn test_db_table_creation_from_file(){
                     name: String
                     homePlanet: String
                  }"[..]),
-        res
+        cols
+    );
+
+    let result_table = IResult::Done(
+        &b""[..],
+        (&"Human"[..],
+        vec![
+            {("id", "String")},
+            {("name", "String")},
+            {("homePlanet", "String")}
+        ])
+    );
+    assert_eq!(
+        table(&b"type Human{
+                    id: String
+                    name: String
+                    homePlanet: String
+                 }"[..]),
+        result_table
+    );
+}
+
+#[test]
+fn test_db_table_creation_from_file(){
+    let mut graph_ql_pool = GraphQLPool::new(
+        "mysql://root:root@localhost:3306",
+        "/home/serhiy/Desktop/rust-sql/types"
+    );
+    let mut s = String::new();
+    graph_ql_pool.init_db_file.read_to_string(&mut s);
+    println!("{}", s);
+
+    let result_database = IResult::Done(
+        &b""[..],
+        vec![
+            {
+                (&"Human"[..],
+                vec![
+                    {("id", "String")},
+                    {("name", "String")},
+                    {("homePlanet", "String")}
+                ])
+            },
+            {
+                (&"Droid"[..],
+                vec![
+                    {("id", "String")},
+                    {("name", "String")},
+                    {("primaryFunction", "String")}
+                ])
+            }
+        ]
+    );
+    assert_eq!(
+        database(&s.into_bytes()[..]),
+        result_database
     );
 }
 

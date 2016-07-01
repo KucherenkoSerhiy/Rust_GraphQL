@@ -3,11 +3,30 @@ use mysql;
 use std::error::Error;
 use std::fs::File;
 use std::path::Path;
+use std::vec::Vec;
+use std::str;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct DbColumn <'t> {
-    pub name: &'t [u8],
-    pub db_type: &'t [u8]
+pub struct DbColumn {
+    name: &'static str,
+    db_type: &'static str
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct DbTable {
+    pub name: &'static str,
+    pub columns: Vec<DbColumn>
+}
+
+impl DbTable {
+    pub fn new (table_name: &str, attributes: Vec<(&str,&str)>) /*-> DbTable*/{
+        let t = table_name;
+        let mut columns: Vec<(DbColumn)> = Vec::new();
+        for attr in attributes {
+            columns.push(DbColumn { name: "name", db_type: "type" });
+        }
+        //DbTable {name: t, columns: columns}
+    }
 }
 
 pub struct GraphQLPool {
