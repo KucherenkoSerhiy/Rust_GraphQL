@@ -1,4 +1,6 @@
 use nom::{not_line_ending, space, alphanumeric, multispace};
+use nom::{IResult,digit};
+use nom::IResult::*;
 
 use std::str;
 use std::vec::Vec;
@@ -35,11 +37,10 @@ named!(pub key_value    <&[u8],(&str,&str)>,
          tag!(":")                         ~
          space?                            ~
     val: map_res!(
-           take_until_either!(" \n"),
+           take_until_either!(" \n)}"),
            str::from_utf8
          )                                 ~
          space?                            ~
-         not_line_ending                   ~
          multispace?                       ,
     ||{(key, val)}
   )
@@ -48,7 +49,6 @@ named!(pub key_value    <&[u8],(&str,&str)>,
 named!(pub attrs <&[u8], Vec<(&str,&str)> >,
     delimited!(
         char!('{'),
-        //take_until_either!(" \n"),
         many0!(chain!(
             multispace?                      ~
             result: key_value,
@@ -69,7 +69,7 @@ named!(pub table <(&str, Vec<(&str, &str)>)>,
     )
 );
 
-named! (pub database < Vec <(&str, Vec<(&str, &str)>)> >,
+named! (pub database <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
     many0!(chain!(
         multispace?                          ~
         res: table                           ~
@@ -77,3 +77,144 @@ named! (pub database < Vec <(&str, Vec<(&str, &str)>)> >,
         ||{res}
     ))
 );
+
+
+named! (pub sql_select <&[u8], (&str, (&str, &str), Vec<&str>)>,
+    delimited!(
+        char!('{'),
+        chain!(
+            multispace?                      ~
+            entity: map_res!(
+                        alphanumeric,
+                        str::from_utf8
+                    )                        ~
+            space?                           ~
+            options: delimited!(
+                char!('('),
+                key_value,
+                char!(')')
+            )                                ~
+            space?                           ~
+            attributes: delimited!(
+                char!('{'),
+                many0!(chain!(
+                    multispace?              ~
+                    res: map_res!(
+                        alphanumeric,
+                        str::from_utf8
+                    )                        ~
+                    multispace?,
+                    ||{res}
+                )),
+                char!('}')
+            )                                ~
+            multispace?,
+            ||{(entity, options, attributes)}
+        ),
+        char!('}')
+    )
+);
+
+
+named! (pub sql_insert <&[u8], (&str, Vec<(&str, &str)> )>,
+    delimited!(
+        char!('{'),
+        chain!(
+            multispace?                      ~
+            entity: map_res!(
+                        alphanumeric,
+                        str::from_utf8
+                    )                        ~
+            multispace?                      ~
+            attributes: delimited!(
+                char!('{'),
+                many0!(chain!(
+                    multispace?              ~
+                    res: key_value           ~
+                    multispace?,
+                    ||{res}
+                )),
+                char!('}')
+            )                                ~
+            multispace?,
+            ||{(entity, attributes)}
+        ),
+        char!('}')
+    )
+);
+
+#[test]
+fn test_parser_functions(){
+    assert_eq!(
+        key_value(&b"id : String
+                    "[..]),
+        //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
+        IResult::Done(&b""[..], {("id", "String")})
+    );
+
+
+    assert_eq!(
+        key_value(&b"id:'1'
+                    "[..]),
+        //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
+        IResult::Done(&b""[..], {("id", "\'1\'")})
+    );
+
+    let cols = IResult::Done(&b""[..], vec![
+        {("id", "String")},
+        {("name", "String")},
+        {("homePlanet", "String")}
+    ]);
+    assert_eq!(
+        attrs(&b"{
+                    id: String
+                    name: String
+                    homePlanet: String
+                 }"[..]),
+        cols
+    );
+
+    let result_table = IResult::Done(
+        &b""[..],
+        (&"Human"[..],
+         vec![
+            {("id", "String")},
+            {("name", "String")},
+            {("homePlanet", "String")}
+        ])
+    );
+    assert_eq!(
+        table(&b"type Human{
+                    id: String
+                    name: String
+                    homePlanet: String
+                 }"[..]),
+        result_table
+    );
+}
+
+#[test]
+fn test_get_object(){
+    let get_query =
+    &b"{
+        user (id:1) {
+            name
+        }
+    }"[..];
+    let get_query_data = IResult::Done(&b""[..], {("user", ("id", "1"), vec![{"name"}])});
+    assert_eq!(sql_select(get_query), get_query_data);
+}
+
+#[test]
+fn test_insert_object(){
+    let insert_query =
+    &b"{
+        Human {
+            id: 1
+            name: Luke
+            homePlanet: Char
+        }
+    }"[..];
+    let insert_query_data = IResult::Done(&b""[..], {("Human", vec![{("id", "1")}, {("name", "Luke")}, {("homePlanet", "Char")}])});
+    assert_eq!(sql_insert(insert_query), insert_query_data);
+}

@@ -1,11 +1,11 @@
 type Human {
-  id: String
-  name: String
-  homePlanet: String
+  id: text
+  name: text
+  homePlanet: text
 }
 
 type Droid {
-  id: String
-  name: String
-  primaryFunction: String
+  id: text
+  name: text
+  primaryFunction: text
 }

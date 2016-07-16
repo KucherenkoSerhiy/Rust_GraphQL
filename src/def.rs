@@ -5,88 +5,242 @@ use std::fs::File;
 use std::path::Path;
 use std::vec::Vec;
 use std::str;
+use std::io::prelude::*;
+
+use parser;
+use parser::*;
+use nom::IResult;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DbColumn {
-    name: &'static str,
-    db_type: &'static str
+    name: String,
+    db_type: String
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DbTable {
-    pub name: &'static str,
+    pub name: String,
     pub columns: Vec<DbColumn>
-}
-
-impl DbTable {
-    pub fn new (table_name: &str, attributes: Vec<(&str,&str)>) /*-> DbTable*/{
-        let t = table_name;
-        let mut columns: Vec<(DbColumn)> = Vec::new();
-        for attr in attributes {
-            columns.push(DbColumn { name: "name", db_type: "type" });
-        }
-        //DbTable {name: t, columns: columns}
-    }
 }
 
 pub struct GraphQLPool {
     pub pool: mysql::Pool,
-    pub init_db_file: File
+    pub database: Vec<DbTable>,
 }
 
 impl GraphQLPool {
-    ///db_params has the structure 'username:password@host:port'
+    //db_params has the structure 'username:password@host:port'
     /*
         EXAMPLE:
-        mysql://root:root@localhost:3306,
-
-
-        type Human : Character {
-            id: String
-            name: String
-            friends: [Character]
-            appearsIn: [Episode]
-            homePlanet: String
-        }
+        db_params = mysql://root:root@localhost:3306,
+        "path_to_my_directory/file"
     */
     pub fn new (db_conn: &str, path_name: &str) -> GraphQLPool{
-        let p = mysql::Pool::new(db_conn).unwrap();
         let path = Path::new(path_name);
+        let mut file = match File::open(path){
+            Err(why) => panic!("couldn't open {}: {}", path_name,
+                why.description()),
+            Ok(file) => file,
+        };
+
+        let mut db_data = String::new();
+        file.read_to_string(&mut db_data);
+
+        let db = create_database(db_data);
+
+        let mut query: String = "".to_string();
+        for table in & db {
+            //creates temporary table with auto-generated id
+            query = query + "CREATE TEMPORARY TABLE " + &table.name; query = query + "(
+                         " + &table.name + "_id int not null"; for column in &table.columns {query = query + ",
+                         "+ &column.name + " "+ &column.db_type}; query = query +"
+                     );\n";
+        }
+        println!("{}", query);
+
+        let p = mysql::Pool::new(db_conn).unwrap();
+        p.prep_exec(query, ()).unwrap();
+
         GraphQLPool{
             pool: p,
-            init_db_file: match File::open(path){
-                // The `description` method of `io::Error` returns a string that
-                // describes the error
-                Err(why) => panic!("couldn't open {}: {}", path_name,
-                why.description()),
-                Ok(file) => file,
-            }
+            database: db
         }
     }
 
-    /*
-    pub fn create_table <T: Any + Debug, E: Any + Debug> (query: &str) -> Result<T,E> {
-
-    }
-    */
-    /*
-    pub fn create (query: &str) -> Result<T,E> {
-
-    }
-    */
-
-    /*
-    pub fn get (query: &str) -> Result<T,E> {
-
-    }
-    */
 /*
-    pub fn update (query: &str) -> Result<T,E> {
+    pub fn post (&mut self, query: &str) /*-> Result<T,E>*/ {
+        let query_data = sql_select(query);
+        match query_data{
+
+            IResult::Done(input, query_structure) => {
+                //query_structure = {(&b"user"[..], ("id", "1"), &b"name"[..])}
+                let mut query: String = "INSERT ".to_string() + query_structure.2[0] + " " +
+                                        "FROM "+ query_structure.0 + ;
+                p.prep_exec(&query, ()).unwrap();
+
+                let selected_data = self.pool.prep_exec(db_query, ())
+                /*.map(|result| {
+                    result.map(|x| x.unwrap()).map(|row| {
+                        let (customer_id, amount, account_name) = my::from_row(row);
+                        Payment {
+                            customer_id: customer_id,
+                            amount: amount,
+                            account_name: account_name,
+                        }
+                    }).collect() // Collect payments so now `QueryResult` is mapped to `Vec<Payment>`
+                }).unwrap()*/;
+            },
+            IResult::Error (cause) => unimplemented!(),
+            IResult::Incomplete (size) => unimplemented!()
+        }
+    }
+*/
+
+
+    pub fn get (&self, query: &str) -> Vec<String> {
+        let query_data = sql_select(query.as_bytes());
+        match query_data{
+
+            IResult::Done(input, query_structure) => {
+                //query_structure = {(&b"user"[..], ("id", "1"), &b"name"[..])}
+                let mut db_query: String = "SELECT ".to_string() + query_structure.2[0] + " " +
+                "FROM " + query_structure.0 + " " +
+                "WHERE " + (query_structure.1).0 + " = " + (query_structure.1).1;
+                println!("Graph_QL_Pool::get:
+                {}", query);
+
+                let selected_data: Vec<String> = self.pool.prep_exec(db_query, ())
+                    .map(|result| {
+                        result.map(|x| x.unwrap()).map(|row| {
+                            mysql::from_row(row)
+                        }).collect() // Collect payments so now `QueryResult` is mapped to `Vec<String>`
+                    }).unwrap();
+                selected_data
+            },
+            IResult::Error (cause) => unimplemented!(),
+            IResult::Incomplete (size) => unimplemented!()
+        }
 
     }
 
-    pub fn delete (query: &str) -> Result<T,E> {
+/*
+    pub fn update (&mut self, query: &str) -> Result<T,E> {
+
+    }
+
+    pub fn delete (&mut self, query: &str) -> Result<T,E> {
 
     }
 */
+}
+
+fn create_database (tables_in_string: String) -> Vec<DbTable> {
+    //variables do not live enough, will look at it again later
+
+    let result = parser::database(tables_in_string.as_bytes());
+
+    match result{
+        IResult::Done(input, tables) => {
+            let mut db: Vec<DbTable> = Vec::new();
+            for table in tables {
+                let mut columns: Vec<DbColumn> = Vec::new();
+                for column in table.1 {
+                    columns.push(DbColumn { name: column.0.to_string(), db_type: column.1.to_string() });
+                }
+                db.push(DbTable{ name: table.0.to_string(), columns:columns })
+            }
+            db
+        },
+        IResult::Error (cause) => unimplemented!(),
+        IResult::Incomplete (size) => unimplemented!()
+    }
+
+    /*sample result:
+    IResult::Done(
+        &b""[..],
+        vec![
+        {
+            (&"Human"[..],
+            vec![
+                {("id", "String")},
+                {("name", "String")},
+                {("homePlanet", "String")}
+            ])
+        },
+        {
+            (&"Droid"[..],
+            vec![
+                {("id", "String")},
+                {("name", "String")},
+                {("primaryFunction", "String")}
+            ])
+        }
+    ]
+    );*/
+    /*
+    let result = vec![
+        {
+            (&"Human"[..],
+            vec![
+                {("id", "String")},
+                {("name", "String")},
+                {("homePlanet", "String")}
+            ])
+        },
+        {
+            (&"Droid"[..],
+            vec![
+                {("id", "String")},
+                {("name", "String")},
+                {("primaryFunction", "String")}
+            ])
+        }
+    ];
+
+    let tables = result;
+    let mut db: Vec<DbTable> = Vec::new();
+    for table in tables {
+        let mut columns: Vec<DbColumn> = Vec::new();
+        for column in table.1 {
+            columns.push(DbColumn { name: column.0.to_string(), db_type: column.1.to_string() });
+        }
+        db.push(DbTable{ name: table.0.to_string(), columns:columns })
+    }
+
+    db*/
+}
+
+// TESTING AREA
+
+struct Test_object {
+    //a - attribute, i - integer, s - string
+    ai1: i32,
+    ai2: i32,
+    as3: Option<String>
+}
+
+#[test]
+fn test_get(){
+
+    let insert_query =
+    &b"{
+        Human {
+            id: 1
+            name: Luke
+            homePlanet: Char
+        }
+    }"[..];
+}
+
+#[test]
+fn test_insert(){
+
+    let insert_query =
+    &b"{
+        Human {
+            id: 1
+            name: Luke
+            homePlanet: Char
+        }
+    }"[..];
 }
