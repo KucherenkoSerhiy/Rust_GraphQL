@@ -69,13 +69,20 @@ named!(pub table <(&str, Vec<(&str, &str)>)>,
     )
 );
 
-named! (pub database <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
+named! (pub tables <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
     many0!(chain!(
         multispace?                          ~
         res: table                           ~
         multispace?,
         ||{res}
     ))
+);
+
+named! (pub database <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
+    chain!(
+        tbl: tables,
+        ||{tbl}
+    )
 );
 
 
@@ -142,7 +149,27 @@ named! (pub sql_insert <&[u8], (&str, Vec<(&str, &str)> )>,
         char!('}')
     )
 );
+/*
+named! (pub sql_update <&[u8], (&str, Vec<(&str, &str)> )>,
+    delimited!(
+        char!('{'),
+        chain!(
 
+        ),
+        char!('}')
+    )
+);
+
+named! (pub sql_delete <&[u8], (&str, Vec<(&str, &str)> )>,
+    delimited!(
+        char!('{'),
+        chain!(
+
+        ),
+        char!('}')
+    )
+);
+*/
 #[test]
 fn test_parser_functions(){
     assert_eq!(
@@ -163,13 +190,15 @@ fn test_parser_functions(){
     let cols = IResult::Done(&b""[..], vec![
         {("id", "String")},
         {("name", "String")},
-        {("homePlanet", "String")}
+        {("homePlanet", "String")},
+        {("list", "[String]")}
     ]);
     assert_eq!(
         attrs(&b"{
                     id: String
                     name: String
                     homePlanet: String
+                    list: [String]
                  }"[..]),
         cols
     );

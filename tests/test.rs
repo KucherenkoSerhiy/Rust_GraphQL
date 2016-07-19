@@ -32,6 +32,14 @@ use std::vec::Vec;
 use nom::{IResult,digit};
 use nom::IResult::*;
 
+const DB_NAME: &'static str = "db";
+const DB_USER: &'static str = "root";
+const DB_PASSWORD: &'static str = "root";
+const HOST: &'static str = "localhost";
+const PORT: &'static str = "3306";
+
+
+
 #[test]
 fn test_mysql_module(){
     #[derive(Debug, PartialEq, Eq)]
@@ -41,12 +49,16 @@ fn test_mysql_module(){
         account_name: Option<String>,
     }
 
-    let pool = my::Pool::new("mysql://root:root@localhost:3306").unwrap(); //mysql://username:password@host:port
+    let MYSQL_CONNECTION = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
+    let pool = my::Pool::new(MYSQL_CONNECTION.as_str()).unwrap(); //mysql://username:password@host:port
+    let mut conn = pool.get_conn().unwrap();
+    conn.query("DROP DATABASE ".to_string() + DB_NAME).unwrap();
+    conn.query("CREATE DATABASE ".to_string() + DB_NAME).unwrap();
 
     // Let's create payment table.
     // It is temporary so we do not need `tmp` database to exist.
     // Unwap just to make sure no error happened.
-    pool.prep_exec(r"CREATE TEMPORARY TABLE tmp.payment (
+    pool.prep_exec("CREATE TEMPORARY TABLE ".to_string() + DB_NAME + ". payment (
                          customer_id int not null,
                          amount int not null,
                          account_name text
@@ -63,7 +75,7 @@ fn test_mysql_module(){
     // Let's insert payments to the database
     // We will use into_iter() because we do not need to map Stmt to anything else.
     // Also we assume that no error happened in `prepare`.
-    for mut stmt in pool.prepare(r"INSERT INTO tmp.payment
+    for mut stmt in pool.prepare(r"INSERT INTO  ".to_string() + DB_NAME + ". payment
                                        (customer_id, amount, account_name)
                                    VALUES
                                        (:customer_id, :amount, :account_name)").into_iter() {
@@ -80,7 +92,7 @@ fn test_mysql_module(){
 
     // Let's select payments from database
     let selected_payments: Vec<Payment> =
-    pool.prep_exec("SELECT customer_id, amount, account_name from tmp.payment", ())
+    pool.prep_exec("SELECT customer_id, amount, account_name from ".to_string() + DB_NAME + ".payment", ())
         .map(|result| { // In this closure we sill map `QueryResult` to `Vec<Payment>`
             // `QueryResult` is iterator over `MyResult<row, err>` so first call to `map`
             // will map each `MyResult` to contained `row` (no proper error handling)
@@ -233,7 +245,7 @@ fn test_eventual () {
 }
 
 #[test]
-#[ignore] //hi ha un problema al crear la db
+//#[ignore] //hi ha un problema al crear la db
 fn test_db_creation () {
 
     #[derive(Debug, PartialEq, Eq)]
@@ -242,12 +254,14 @@ fn test_db_creation () {
         name: String
     }
 
+    let MYSQL_CONNECTION = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
     let graph_ql_pool = GraphQLPool::new(
-        "mysql://root:root@localhost:3306",
+        MYSQL_CONNECTION.as_str(),
+        DB_NAME,
         "/home/serhiy/Desktop/rust-sql/types"
     );
-/*
-    graph_ql_pool.pool.prep_exec(r"CREATE TEMPORARY TABLE tmp.user (
+
+    graph_ql_pool.pool.prep_exec(r"CREATE TEMPORARY TABLE ".to_string() + DB_NAME + ".user (
                          id int not null,
                          name text
                      )", ()).unwrap();
@@ -257,7 +271,7 @@ fn test_db_creation () {
         User { id: 2, name: "bar".into() }
     ];
 
-    for mut stmt in graph_ql_pool.pool.prepare(r"INSERT INTO tmp.user
+    for mut stmt in graph_ql_pool.pool.prepare(r"INSERT INTO ".to_string() + DB_NAME + ".user
                                        (id, name)
                                    VALUES
                                        (:id, :name)").into_iter() {
@@ -270,7 +284,7 @@ fn test_db_creation () {
     }
 
     let selected_users: Vec<User> =
-    graph_ql_pool.pool.prep_exec("SELECT * FROM tmp.user", ())
+    graph_ql_pool.pool.prep_exec("SELECT * FROM ".to_string() + DB_NAME + ".user", ())
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, name) = my::from_row(row);
@@ -282,7 +296,7 @@ fn test_db_creation () {
         }).unwrap();
 
     assert_eq!(users, selected_users);
-*/
+
 }
 
 /*

@@ -1,3 +1,4 @@
+#[macro_use]
 use mysql;
 
 use std::error::Error;
@@ -35,7 +36,7 @@ impl GraphQLPool {
         db_params = mysql://root:root@localhost:3306,
         "path_to_my_directory/file"
     */
-    pub fn new (db_conn: &str, path_name: &str) -> GraphQLPool{
+    pub fn new (db_conn: &str, db_name: &str, path_name: &str) -> GraphQLPool{
         let path = Path::new(path_name);
         let mut file = match File::open(path){
             Err(why) => panic!("couldn't open {}: {}", path_name,
@@ -51,7 +52,7 @@ impl GraphQLPool {
         let mut query: String = "".to_string();
         for table in & db {
             //creates temporary table with auto-generated id
-            query = query + "CREATE TEMPORARY TABLE " + &table.name; query = query + "(
+            query = query + "CREATE TEMPORARY TABLE " + db_name + "." + &table.name; query = query + "(
                          " + &table.name + "_id int not null"; for column in &table.columns {query = query + ",
                          "+ &column.name + " "+ &column.db_type}; query = query +"
                      );\n";
@@ -59,7 +60,13 @@ impl GraphQLPool {
         println!("{}", query);
 
         let p = mysql::Pool::new(db_conn).unwrap();
-        p.prep_exec(query, ()).unwrap();
+
+        let mut conn = p.get_conn().unwrap();
+        //conn.query("DROP DATABASE ".to_string() + db_name).unwrap();
+        //conn.query("CREATE DATABASE ".to_string() + db_name).unwrap();
+        conn.query("USE ".to_string() + db_name).unwrap();
+
+        conn.query(query).unwrap();
 
         GraphQLPool{
             pool: p,
@@ -69,26 +76,12 @@ impl GraphQLPool {
 
 /*
     pub fn post (&mut self, query: &str) /*-> Result<T,E>*/ {
-        let query_data = sql_select(query);
+        let query_data = sql_insert(query);
         match query_data{
-
             IResult::Done(input, query_structure) => {
                 //query_structure = {(&b"user"[..], ("id", "1"), &b"name"[..])}
-                let mut query: String = "INSERT ".to_string() + query_structure.2[0] + " " +
-                                        "FROM "+ query_structure.0 + ;
+                let mut query: String = INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
                 p.prep_exec(&query, ()).unwrap();
-
-                let selected_data = self.pool.prep_exec(db_query, ())
-                /*.map(|result| {
-                    result.map(|x| x.unwrap()).map(|row| {
-                        let (customer_id, amount, account_name) = my::from_row(row);
-                        Payment {
-                            customer_id: customer_id,
-                            amount: amount,
-                            account_name: account_name,
-                        }
-                    }).collect() // Collect payments so now `QueryResult` is mapped to `Vec<Payment>`
-                }).unwrap()*/;
             },
             IResult::Error (cause) => unimplemented!(),
             IResult::Incomplete (size) => unimplemented!()
@@ -125,11 +118,29 @@ impl GraphQLPool {
 
 /*
     pub fn update (&mut self, query: &str) -> Result<T,E> {
-
+        let query_data = sql_update(query);
+        match query_data{
+            IResult::Done(input, query_structure) => {
+                //query_structure = {(&b"user"[..], ("id", "1"), &b"name"[..])}
+                let mut query: String = UPDATE t1 SET col1 = col1 + 1;;
+                p.prep_exec(&query, ()).unwrap();
+            },
+            IResult::Error (cause) => unimplemented!(),
+            IResult::Incomplete (size) => unimplemented!()
+        }
     }
 
     pub fn delete (&mut self, query: &str) -> Result<T,E> {
-
+        let query_data = sql_delete(query);
+        match query_data{
+            IResult::Done(input, query_structure) => {
+                //query_structure = {(&b"user"[..], ("id", "1"), &b"name"[..])}
+                let mut query: String = DELETE t1 FROM test AS t1, test2 WHERE ...;
+                p.prep_exec(&query, ()).unwrap();
+            },
+            IResult::Error (cause) => unimplemented!(),
+            IResult::Incomplete (size) => unimplemented!()
+        }
     }
 */
 }
