@@ -37,7 +37,8 @@ const DB_USER: &'static str = "root";
 const DB_PASSWORD: &'static str = "root";
 const HOST: &'static str = "localhost";
 const PORT: &'static str = "3306";
-
+const FILE_NAME: &'static str = "types";
+const FILE_LOCATION: &'static str = "/home/serhiy/Desktop/rust-sql";
 
 
 #[test]
@@ -245,44 +246,45 @@ fn test_eventual () {
 }
 
 #[test]
-//#[ignore] //hi ha un problema al crear la db
 fn test_db_creation () {
-
-    #[derive(Debug, PartialEq, Eq)]
-    struct User {
-        id: i32,
-        name: String
-    }
-
     let MYSQL_CONNECTION = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
     let graph_ql_pool = GraphQLPool::new(
         MYSQL_CONNECTION.as_str(),
         DB_NAME,
-        "/home/serhiy/Desktop/rust-sql/types"
+        &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
     );
 
-    graph_ql_pool.pool.prep_exec(r"CREATE TEMPORARY TABLE ".to_string() + DB_NAME + ".user (
-                         id int not null,
-                         name text
-                     )", ()).unwrap();
+}
 
-    let users = vec![
-        User { id: 1, name: "foo".into() },
-        User { id: 2, name: "bar".into() }
-    ];
+#[test]
+fn test_db_creation_and_CRUD () {
+    let MYSQL_CONNECTION = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
+    let mut graph_ql_pool = GraphQLPool::new(
+        MYSQL_CONNECTION.as_str(),
+        DB_NAME,
+        &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
+    );
 
-    for mut stmt in graph_ql_pool.pool.prepare(r"INSERT INTO ".to_string() + DB_NAME + ".user
-                                       (id, name)
-                                   VALUES
-                                       (:id, :name)").into_iter() {
-        for p in users.iter() {
-            stmt.execute(params!{
-                "id" => my::Value::from(p.id),
-                "name" => my::Value::from(&p.name),
-            }).unwrap();
+    let insert_query =
+    "{
+        Human {
+            id: 1
+            name: Luke
+            homePlanet: Char
         }
-    }
+    }";
 
+    let get_query =
+    "{
+        Human {
+            id
+            name
+            homePlanet
+        }
+    }";
+
+    graph_ql_pool.post(insert_query);
+/*
     let selected_users: Vec<User> =
     graph_ql_pool.pool.prep_exec("SELECT * FROM ".to_string() + DB_NAME + ".user", ())
         .map(|result| {
@@ -296,63 +298,5 @@ fn test_db_creation () {
         }).unwrap();
 
     assert_eq!(users, selected_users);
-
-}
-
-/*
-//It works if not letting read file in the method GraphQLPool::new
-#[test]
-fn test_db_table_creation_from_file(){
-    let mut graph_ql_pool = GraphQLPool::new(
-        "mysql://root:root@localhost:3306",
-        "/home/serhiy/Desktop/rust-sql/types"
-    );
-    let mut s = String::new();
-    graph_ql_pool.init_db_file.read_to_string(&mut s);
-    println!("{}", s);
-
-    let result_database = IResult::Done(
-        &b""[..],
-        vec![
-            {
-                (&"Human"[..],
-                vec![
-                    {("id", "String")},
-                    {("name", "String")},
-                    {("homePlanet", "String")}
-                ])
-            },
-            {
-                (&"Droid"[..],
-                vec![
-                    {("id", "String")},
-                    {("name", "String")},
-                    {("primaryFunction", "String")}
-                ])
-            }
-        ]
-    );
-    assert_eq!(
-        database(&s.into_bytes()[..]),
-        result_database
-    );
-}
 */
-
-
-    /*
-
-
-    let expected_answer =
-    "
-        {
-            'data': {
-                'user': {
-                    'name': 'foo'
-                }
-            }
-        }
-    "
-    ;
-    let answer = graphQLPool.graphql(query);
-    */
+}
