@@ -27,6 +27,7 @@ pub struct DbTable {
 pub struct GraphQLPool {
     pub pool: mysql::Pool,
     pub database: Vec<DbTable>,
+    pub working_database_name: String
 }
 
 impl GraphQLPool {
@@ -70,24 +71,43 @@ impl GraphQLPool {
 
         GraphQLPool{
             pool: p,
-            database: db
+            database: db,
+            working_database_name: db_name.to_string()
         }
     }
 
-/*
+
     pub fn post (&mut self, query: &str) /*-> Result<T,E>*/ {
-        let query_data = sql_insert(query);
+        let query_data = sql_insert(query.as_bytes());
         match query_data{
             IResult::Done(input, query_structure) => {
-                //query_structure = {(&b"user"[..], ("id", "1"), &b"name"[..])}
-                let mut query: String = INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
-                p.prep_exec(&query, ()).unwrap();
+                //query_structure : (&str, Vec<(&str, &str)> )
+                let last_column = &query_structure.1.last().unwrap();
+                let mut db_query: String = "INSERT INTO ".to_string() + &(self.working_database_name) + "." + query_structure.0 + "(";
+                                        /*COLUMNS*/
+                                        for col in &query_structure.1{
+                                            db_query = db_query + col.0;
+                                            if col.0 != last_column.0 {db_query = db_query + ","};
+                                            db_query = db_query + " ";
+                                        }
+
+                                        db_query = db_query + ")\n" +
+
+                                        "VALUES (";
+                                        for col in &query_structure.1{
+                                            db_query = db_query + "\"" + col.1 + "\"";;
+                                            if col.1 != last_column.1 {db_query = db_query + ","};
+                                            db_query = db_query + " ";
+                                        }
+                                        db_query = db_query + ");";
+                println!("Graph_QL_Pool::post:\n{}", db_query);
+                self.pool.prep_exec(&db_query, ()).unwrap();
             },
             IResult::Error (cause) => unimplemented!(),
             IResult::Incomplete (size) => unimplemented!()
         }
     }
-*/
+
 
 
     pub fn get (&self, query: &str) -> Vec<String> {
@@ -95,12 +115,21 @@ impl GraphQLPool {
         match query_data{
 
             IResult::Done(input, query_structure) => {
-                //query_structure = {(&b"user"[..], ("id", "1"), &b"name"[..])}
-                let mut db_query: String = "SELECT ".to_string() + query_structure.2[0] + " " +
-                "FROM " + query_structure.0 + " " +
-                "WHERE " + (query_structure.1).0 + " = " + (query_structure.1).1;
-                println!("Graph_QL_Pool::get:
-                {}", query);
+                //query_structure : (&str, (&str, &str), Vec<&str>)
+                let last_column = query_structure.2.last().unwrap();
+                let mut db_query: String = "SELECT ".to_string();
+                                            for col in &query_structure.2{
+                                                db_query = db_query + col;
+                                                if col != last_column {db_query = db_query + ","};
+                                                db_query = db_query + " "
+                                            }
+                                            db_query = db_query + " " +
+
+                                            "FROM " + &(self.working_database_name) + "." + query_structure.0 + " " +
+
+                                            "WHERE " + (query_structure.1).0 + " = " + (query_structure.1).1 + ";";
+
+                println!("Graph_QL_Pool::get:\n{}", db_query);
 
                 let selected_data: Vec<String> = self.pool.prep_exec(db_query, ())
                     .map(|result| {
@@ -222,36 +251,3 @@ fn create_database (tables_in_string: String) -> Vec<DbTable> {
 }
 
 // TESTING AREA
-
-struct Test_object {
-    //a - attribute, i - integer, s - string
-    ai1: i32,
-    ai2: i32,
-    as3: Option<String>
-}
-
-#[test]
-fn test_get(){
-
-    let insert_query =
-    &b"{
-        Human {
-            id: 1
-            name: Luke
-            homePlanet: Char
-        }
-    }"[..];
-}
-
-#[test]
-fn test_insert(){
-
-    let insert_query =
-    &b"{
-        Human {
-            id: 1
-            name: Luke
-            homePlanet: Char
-        }
-    }"[..];
-}
