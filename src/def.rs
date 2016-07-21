@@ -31,12 +31,7 @@ pub struct GraphQLPool {
 }
 
 impl GraphQLPool {
-    //db_params has the structure 'username:password@host:port'
-    /*
-        EXAMPLE:
-        db_params = mysql://root:root@localhost:3306,
-        "path_to_my_directory/file"
-    */
+    //WARNING: it overwrites the given database
     pub fn new (db_conn: &str, db_name: &str, path_name: &str) -> GraphQLPool{
         let path = Path::new(path_name);
         let mut file = match File::open(path){
@@ -54,7 +49,7 @@ impl GraphQLPool {
         for table in & db {
             //creates temporary table with auto-generated id
             //query = query + "DROP TABLE IF EXISTS " + db_name + "." + &table.name + ";\n";
-            query = query + "CREATE TABLE " + db_name + "." + &table.name; query = query + "(
+            query = query + "CREATE TABLE IF NOT EXISTS " + db_name + "." + &table.name; query = query + "(
                          " + &table.name + "_id int not null DEFAULT '-1'"; for column in &table.columns {query = query + ",
                          "+ &column.name + " "+ &column.db_type}; query = query +"
                      );\n";
@@ -64,8 +59,8 @@ impl GraphQLPool {
         let p = mysql::Pool::new(db_conn).unwrap();
 
         let mut conn = p.get_conn().unwrap();
-        conn.query("DROP DATABASE IF EXISTS ".to_string() + db_name).unwrap();
-        conn.query("CREATE DATABASE ".to_string() + db_name).unwrap();
+        //conn.query("DROP DATABASE IF EXISTS ".to_string() + db_name).unwrap();
+        conn.query("CREATE DATABASE IF NOT EXISTS ".to_string() + db_name).unwrap();
         conn.query("USE ".to_string() + db_name).unwrap();
 
         conn.query(query).unwrap();
@@ -102,7 +97,8 @@ impl GraphQLPool {
                                         }
                                         db_query = db_query + ");";
                 println!("Graph_QL_Pool::post:\n{}", db_query);
-                self.pool.prep_exec(&db_query, ()).unwrap();
+                let mut conn = self.pool.get_conn().unwrap();
+                conn.query(&db_query).unwrap();
             },
             IResult::Error (cause) => unimplemented!(),
             IResult::Incomplete (size) => unimplemented!()
