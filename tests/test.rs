@@ -32,7 +32,7 @@ use std::vec::Vec;
 use nom::{IResult,digit};
 use nom::IResult::*;
 
-const DB_NAME: &'static str = "db";
+const DB_NAME: &'static str = "serhiy_db";
 const DB_USER: &'static str = "root";
 const DB_PASSWORD: &'static str = "root";
 const HOST: &'static str = "localhost";
@@ -53,7 +53,7 @@ fn test_mysql_module(){
     let MYSQL_CONNECTION = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
     let pool = my::Pool::new(MYSQL_CONNECTION.as_str()).unwrap(); //mysql://username:password@host:port
     let mut conn = pool.get_conn().unwrap();
-    conn.query("DROP DATABASE ".to_string() + DB_NAME).unwrap();
+    conn.query("DROP DATABASE IF EXISTS ".to_string() + DB_NAME).unwrap();
     conn.query("CREATE DATABASE ".to_string() + DB_NAME).unwrap();
 
     // Let's create payment table.
