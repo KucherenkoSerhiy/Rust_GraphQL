@@ -248,12 +248,11 @@ fn test_eventual () {
 #[test]
 fn test_db_creation () {
     let MYSQL_CONNECTION = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
-    let graph_ql_pool = GraphQLPool::new(
+    let mut graph_ql_pool = GraphQLPool::new(
         MYSQL_CONNECTION.as_str(),
         DB_NAME,
         &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
     );
-
 }
 
 #[test]

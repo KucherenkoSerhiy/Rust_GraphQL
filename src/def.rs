@@ -53,8 +53,9 @@ impl GraphQLPool {
         let mut query: String = "".to_string();
         for table in & db {
             //creates temporary table with auto-generated id
-            query = query + "CREATE TEMPORARY TABLE " + db_name + "." + &table.name; query = query + "(
-                         " + &table.name + "_id int not null"; for column in &table.columns {query = query + ",
+            //query = query + "DROP TABLE IF EXISTS " + db_name + "." + &table.name + ";\n";
+            query = query + "CREATE TABLE " + db_name + "." + &table.name; query = query + "(
+                         " + &table.name + "_id int not null DEFAULT '-1'"; for column in &table.columns {query = query + ",
                          "+ &column.name + " "+ &column.db_type}; query = query +"
                      );\n";
         }
@@ -63,8 +64,8 @@ impl GraphQLPool {
         let p = mysql::Pool::new(db_conn).unwrap();
 
         let mut conn = p.get_conn().unwrap();
-        //conn.query("DROP DATABASE ".to_string() + db_name).unwrap();
-        //conn.query("CREATE DATABASE ".to_string() + db_name).unwrap();
+        conn.query("DROP DATABASE IF EXISTS ".to_string() + db_name).unwrap();
+        conn.query("CREATE DATABASE ".to_string() + db_name).unwrap();
         conn.query("USE ".to_string() + db_name).unwrap();
 
         conn.query(query).unwrap();
