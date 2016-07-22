@@ -113,6 +113,7 @@ impl GraphQLPool {
 
             IResult::Done(input, query_structure) => {
                 //query_structure : (&str, (&str, &str), Vec<&str>)
+
                 let last_column = query_structure.2.last().unwrap();
                 let mut db_query: String = "SELECT ".to_string();
                                             for col in &query_structure.2{
@@ -120,7 +121,7 @@ impl GraphQLPool {
                                                 if col != last_column {db_query = db_query + ","};
                                                 db_query = db_query + " "
                                             }
-                                            db_query = db_query + " " +
+                                            db_query = db_query +
 
                                             "FROM " + &(self.working_database_name) + "." + query_structure.0 + " " +
 
@@ -128,15 +129,26 @@ impl GraphQLPool {
 
                 println!("Graph_QL_Pool::get:\n{}", db_query);
 
-                let selected_data: Vec<String> = self.pool.prep_exec(db_query, ())
-                    .map(|result| {
-                        result.map(|x| x.unwrap()).map(|row| {
-                            mysql::from_row(row)
-                        }).collect() // Collect payments so now `QueryResult` is mapped to `Vec<String>`
-                    }).unwrap();
-                selected_data
+                let mut result = Vec::new();
+                self.pool.prep_exec(db_query, ()).map(|mut result| {
+                    let mut row = result.next().unwrap().unwrap();
+                    /*
+                    for col in query_structure.2{
+                        let data : String = row.take(col).unwrap();
+                        result.push(data);
+                    }
+                    */
+                    let name: String = row.take("name").unwrap();
+                    let homePlanet: String = row.take("homePlanet").unwrap();
+
+                    assert_eq!("Luke", name);
+                    assert_eq!("Char", homePlanet);
+                });
+
+                result
+
             },
-            IResult::Error (cause) => unimplemented!(),
+            IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),
             IResult::Incomplete (size) => unimplemented!()
         }
 
@@ -169,6 +181,10 @@ impl GraphQLPool {
         }
     }
 */
+    pub fn finish (&mut self){
+        let mut conn = self.pool.get_conn().unwrap();
+        conn.query("DROP DATABASE IF EXISTS ".to_string() + &(self.working_database_name)).unwrap();
+    }
 }
 
 fn create_database (tables_in_string: String) -> Vec<DbTable> {
@@ -192,59 +208,7 @@ fn create_database (tables_in_string: String) -> Vec<DbTable> {
         IResult::Incomplete (size) => unimplemented!()
     }
 
-    /*sample result:
-    IResult::Done(
-        &b""[..],
-        vec![
-        {
-            (&"Human"[..],
-            vec![
-                {("id", "String")},
-                {("name", "String")},
-                {("homePlanet", "String")}
-            ])
-        },
-        {
-            (&"Droid"[..],
-            vec![
-                {("id", "String")},
-                {("name", "String")},
-                {("primaryFunction", "String")}
-            ])
-        }
-    ]
-    );*/
-    /*
-    let result = vec![
-        {
-            (&"Human"[..],
-            vec![
-                {("id", "String")},
-                {("name", "String")},
-                {("homePlanet", "String")}
-            ])
-        },
-        {
-            (&"Droid"[..],
-            vec![
-                {("id", "String")},
-                {("name", "String")},
-                {("primaryFunction", "String")}
-            ])
-        }
-    ];
 
-    let tables = result;
-    let mut db: Vec<DbTable> = Vec::new();
-    for table in tables {
-        let mut columns: Vec<DbColumn> = Vec::new();
-        for column in table.1 {
-            columns.push(DbColumn { name: column.0.to_string(), db_type: column.1.to_string() });
-        }
-        db.push(DbTable{ name: table.0.to_string(), columns:columns })
-    }
-
-    db*/
 }
 
 // TESTING AREA

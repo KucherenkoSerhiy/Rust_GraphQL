@@ -1,3 +1,5 @@
+//To successfully run tests please set environment variable RUST_TEST_THREADS to 1
+
 #[macro_use]
 extern crate rust_sql;
 
@@ -193,7 +195,6 @@ fn test_nom_module(){
     assert_eq!(r, Done(&b"\nijklmnopqrstuvwxyz"[..], &b"abcdefgh"[..]));
 }
 
-
 /*
 const SERVER: Token = Token(0);
 const CLIENT: Token = Token(1);
@@ -253,6 +254,8 @@ fn test_db_creation () {
         DB_NAME,
         &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
     );
+
+    graph_ql_pool.finish();
 }
 
 #[test]
@@ -275,14 +278,16 @@ fn test_db_creation_and_CRUD () {
 
     let get_query =
     "{
-        Human {
-            id
+        Human (id:\"1\"){
             name
             homePlanet
         }
     }";
 
     graph_ql_pool.post(insert_query);
+    graph_ql_pool.get(get_query);
+
+    graph_ql_pool.finish();
 /*
     let selected_users: Vec<User> =
     graph_ql_pool.pool.prep_exec("SELECT * FROM ".to_string() + DB_NAME + ".user", ())
