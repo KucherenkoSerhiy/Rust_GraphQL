@@ -5,7 +5,9 @@ type Human {
 }
 
 type Droid {
-  id: text
-  name: text
-  primaryFunction: text
+  id: int
+  name: varchar(12)
+  age: int
+  primaryFunction: varchar(20)
+  created: date
 }

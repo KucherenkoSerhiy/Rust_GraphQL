@@ -267,7 +267,8 @@ fn test_db_creation_and_CRUD () {
         &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
     );
 
-    let insert_query =
+    //HUMANS
+    let add_human_query =
     "{
         Human {
             id: 1
@@ -276,7 +277,7 @@ fn test_db_creation_and_CRUD () {
         }
     }";
 
-    let get_query =
+    let get_human_query =
     "{
         Human (id:\"1\"){
             name
@@ -284,8 +285,34 @@ fn test_db_creation_and_CRUD () {
         }
     }";
 
-    graph_ql_pool.post(insert_query);
-    graph_ql_pool.get(get_query);
+    graph_ql_pool.post(add_human_query);
+    graph_ql_pool.get(get_human_query);
+
+
+    //DROIDS
+    let add_droid_query =
+    "{
+        Droid {
+            id: 1
+            name: R2D2
+            age: 4
+            primaryFunction: Mechanic
+            created: 2012-01-01
+        }
+    }";
+
+    let get_droid_query =
+    "{
+        Human (id:\"1\"){
+            name
+            age
+            primaryFunction
+            created
+        }
+    }";
+
+    graph_ql_pool.post(add_droid_query);
+    graph_ql_pool.get(get_droid_query);
 
     graph_ql_pool.finish();
 /*

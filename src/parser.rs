@@ -30,14 +30,30 @@ OUTPUT
     )"
 */
 
-named!(parse_key_value <&[u8],(&str,&str)>,
+named!(parse_param <&[u8],(&str,&str)>,
   chain!(
     key: map_res!(alphanumeric, str::from_utf8) ~
          space?                            ~
          tag!(":")                         ~
          space?                            ~
     val: map_res!(
-           take_until_either!(" \n)}"),
+           take_until_either!(")"),
+           str::from_utf8
+         )                                 ~
+         space?                            ~
+         multispace?                       ,
+    ||{(key, val)}
+  )
+);
+
+named!(parse_field <&[u8],(&str,&str)>,
+  chain!(
+    key: map_res!(alphanumeric, str::from_utf8) ~
+         space?                            ~
+         tag!(":")                         ~
+         space?                            ~
+    val: map_res!(
+           take_until_either!("\n}"),
            str::from_utf8
          )                                 ~
          space?                            ~
@@ -51,7 +67,7 @@ named!(parse_object_attributes <&[u8], Vec<(&str,&str)> >,
         char!('{'),
         many0!(chain!(
             multispace?                      ~
-            result: parse_key_value,
+            result: parse_field,
             ||{result}
         )),
         char!('}')
@@ -72,7 +88,7 @@ named!(parse_object <(&str, Vec<(&str, &str)>)>,
 named! (pub parse_all_objects <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
     many0!(chain!(
         multispace?                          ~
-        result: parse_object                           ~
+        result: parse_object                 ~
         multispace?,
         ||{result}
     ))
@@ -100,7 +116,7 @@ named! (pub parse_select_query <&[u8], (&str, (&str, &str), Vec<&str>)>,
             space?                           ~
             table_params: delimited!(
                 char!('('),
-                parse_key_value,
+                parse_param,
                 char!(')')
             )                                ~
             space?                           ~
@@ -139,7 +155,7 @@ named! (pub parse_insert_query <&[u8], (&str, Vec<(&str, &str)> )>,
                 char!('{'),
                 many0!(chain!(
                     multispace?              ~
-                    res: parse_key_value     ~
+                    res: parse_field         ~
                     multispace?,
                     ||{res}
                 )),
@@ -172,10 +188,11 @@ named! (pub sql_delete <&[u8], (&str, Vec<(&str, &str)> )>,
     )
 );
 */
+
 #[test]
 fn test_internal_parser_functions(){
     assert_eq!(
-        parse_key_value(&b"id : String
+        parse_field(&b"id : String
                     "[..]),
         //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
         IResult::Done(&b""[..], {("id", "String")})
@@ -183,7 +200,7 @@ fn test_internal_parser_functions(){
 
 
     assert_eq!(
-        parse_key_value(&b"id:'1'
+        parse_field(&b"id:'1'
                     "[..]),
         //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
         IResult::Done(&b""[..], {("id", "\'1\'")})
@@ -238,7 +255,7 @@ fn test_get_parser_function(){
 
 #[test]
 fn test_insert_parser_function(){
-    let insert_query =
+    let mut insert_query =
     &b"{
         Human {
             id: 1
@@ -246,6 +263,19 @@ fn test_insert_parser_function(){
             homePlanet: Char
         }
     }"[..];
-    let insert_query_data = IResult::Done(&b""[..], {("Human", vec![{("id", "1")}, {("name", "Luke")}, {("homePlanet", "Char")}])});
+    let mut insert_query_data = IResult::Done(&b""[..], {("Human", vec![{("id", "1")}, {("name", "Luke")}, {("homePlanet", "Char")}])});
+    assert_eq!(parse_insert_query(insert_query), insert_query_data);
+
+    insert_query =
+    &b"{
+        Droid {
+            id: 1
+            name: R2D2
+            age: 3
+            primaryFunction: Mechanic
+            created: STR_TO_DATE('1-01-2012', '%d-%m-%Y')
+        }
+    }"[..];
+    insert_query_data = IResult::Done(&b""[..], {("Droid", vec![{("id", "1")}, {("name", "R2D2")}, {("age", "3")}, {("primaryFunction", "Mechanic")}, {("created", "STR_TO_DATE('1-01-2012', '%d-%m-%Y')")}])});
     assert_eq!(parse_insert_query(insert_query), insert_query_data);
 }
