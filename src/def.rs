@@ -1,7 +1,7 @@
-#[macro_use]
+//#[macro_use]
 use mysql;
 
-use std::error::Error;
+//use std::error::Error;
 use std::vec::Vec;
 use std::str;
 use std::io::prelude::*;
@@ -64,7 +64,8 @@ impl GraphQLPool {
     pub fn post (&mut self, query: &str) /*-> Result<T,E>*/ {
         let insert_query_data = parser::parse_insert_query(query.as_bytes());
         match insert_query_data{
-            IResult::Done(input, insert_structure) => {
+            //IResult::Done(input, insert_structure) => {
+            IResult::Done(_, insert_structure) => {
                 //insert_structure : (&str, Vec<(&str, &str)> )
                 let last_column = &insert_structure.1.last().unwrap();
                 let mut mysql_insert: String = "INSERT INTO ".to_string() + &(self.working_database_name) + "." + insert_structure.0 + "(";
@@ -88,8 +89,10 @@ impl GraphQLPool {
                 let mut conn = self.pool.get_conn().unwrap();
                 conn.query(&mysql_insert).unwrap();
             },
-            IResult::Error (cause) => unimplemented!(),
-            IResult::Incomplete (size) => unimplemented!()
+            //IResult::Error (cause) => unimplemented!(),
+            IResult::Error (_) => unimplemented!(),
+            //IResult::Incomplete (size) => unimplemented!()
+            IResult::Incomplete (_) => unimplemented!()
         }
     }
 
@@ -99,7 +102,8 @@ impl GraphQLPool {
         let select_query_data = parser::parse_select_query(query.as_bytes());
         match select_query_data{
 
-            IResult::Done(input, select_structure) => {
+            //IResult::Done(input, select_structure) => {
+            IResult::Done(_, select_structure) => {
                 //select_structure : (&str, (&str, &str), Vec<&str>)
 
                 let last_column = select_structure.2.last().unwrap();
@@ -137,7 +141,8 @@ impl GraphQLPool {
 
             },
             IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),
-            IResult::Incomplete (size) => unimplemented!()
+            //IResult::Incomplete (size) => unimplemented!()
+            IResult::Incomplete (_) => unimplemented!()
         }
 
     }

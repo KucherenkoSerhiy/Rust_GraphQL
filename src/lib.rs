@@ -17,4 +17,4 @@ extern crate env_logger;
 pub mod reader;
 pub mod def;
 pub mod parser;
-mod connection;
+// pub mod connection;

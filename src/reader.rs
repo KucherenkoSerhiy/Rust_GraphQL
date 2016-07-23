@@ -36,7 +36,8 @@ pub fn extract_database_from_file (path_name: &str) -> Vec<DbTable> {
     let result = parser::parse_all_objects(db_data.as_bytes());
 
     match result{
-        IResult::Done(input, tables) => {
+        //IResult::Done(input, tables) => {
+        IResult::Done(_, tables) => {
             let mut db: Vec<DbTable> = Vec::new();
             for table in tables {
                 let mut columns: Vec<DbColumn> = Vec::new();
@@ -47,8 +48,10 @@ pub fn extract_database_from_file (path_name: &str) -> Vec<DbTable> {
             }
             db
         },
-        IResult::Error (cause) => unimplemented!(),
-        IResult::Incomplete (size) => unimplemented!()
+        //IResult::Error (cause) => unimplemented!(),
+        IResult::Error (_) => unimplemented!(),
+        //IResult::Incomplete (size) => unimplemented!()
+        IResult::Incomplete (_) => unimplemented!()
     }
 
 
