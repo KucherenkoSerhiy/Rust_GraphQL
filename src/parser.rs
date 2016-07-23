@@ -30,7 +30,7 @@ OUTPUT
     )"
 */
 
-named!(pub key_value    <&[u8],(&str,&str)>,
+named!(parse_key_value <&[u8],(&str,&str)>,
   chain!(
     key: map_res!(alphanumeric, str::from_utf8) ~
          space?                            ~
@@ -46,105 +46,107 @@ named!(pub key_value    <&[u8],(&str,&str)>,
   )
 );
 
-named!(pub attrs <&[u8], Vec<(&str,&str)> >,
+named!(parse_object_attributes <&[u8], Vec<(&str,&str)> >,
     delimited!(
         char!('{'),
         many0!(chain!(
             multispace?                      ~
-            result: key_value,
+            result: parse_key_value,
             ||{result}
         )),
         char!('}')
     )
 );
 
-named!(pub table <(&str, Vec<(&str, &str)>)>,
+named!(parse_object <(&str, Vec<(&str, &str)>)>,
     chain!(
         tag!("type")                         ~
         space                                ~
         name: map_res!(alphanumeric, str::from_utf8) ~
         multispace?                          ~
-        cols: attrs,
-        || {(name, cols)}
+        attrs: parse_object_attributes,
+        || {(name, attrs)}
     )
 );
 
-named! (pub tables <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
+named! (pub parse_all_objects <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
     many0!(chain!(
         multispace?                          ~
-        res: table                           ~
+        result: parse_object                           ~
         multispace?,
-        ||{res}
+        ||{result}
     ))
 );
 
-named! (pub database <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
+/*
+WILL BE USED TO PARSE EVERYTHING IN THE FILE
+named! (pub parse_file <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
     chain!(
-        tbl: tables,
+        tbl: parse_all_objects,
         ||{tbl}
     )
 );
+*/
 
-
-named! (pub sql_select <&[u8], (&str, (&str, &str), Vec<&str>)>,
+named! (pub parse_select_query <&[u8], (&str, (&str, &str), Vec<&str>)>,
     delimited!(
         char!('{'),
         chain!(
             multispace?                      ~
-            entity: map_res!(
+            table_name: map_res!(
                         alphanumeric,
                         str::from_utf8
                     )                        ~
             space?                           ~
-            options: delimited!(
+            table_params: delimited!(
                 char!('('),
-                key_value,
+                parse_key_value,
                 char!(')')
             )                                ~
             space?                           ~
-            attributes: delimited!(
+            table_cols: delimited!(
                 char!('{'),
                 many0!(chain!(
                     multispace?              ~
-                    res: map_res!(
+                    result: map_res!(
                         alphanumeric,
                         str::from_utf8
                     )                        ~
                     multispace?,
-                    ||{res}
+                    ||{result}
                 )),
                 char!('}')
             )                                ~
             multispace?,
-            ||{(entity, options, attributes)}
+            ||{(table_name, table_params, table_cols)}
         ),
         char!('}')
     )
 );
 
 
-named! (pub sql_insert <&[u8], (&str, Vec<(&str, &str)> )>,
+named! (pub parse_insert_query <&[u8], (&str, Vec<(&str, &str)> )>,
     delimited!(
         char!('{'),
         chain!(
             multispace?                      ~
-            entity: map_res!(
+            table_name: map_res!(
                         alphanumeric,
                         str::from_utf8
                     )                        ~
             multispace?                      ~
-            attributes: delimited!(
+            table_cols: delimited!(
                 char!('{'),
                 many0!(chain!(
                     multispace?              ~
-                    res: key_value           ~
+                    res: parse_key_value     ~
                     multispace?,
                     ||{res}
                 )),
                 char!('}')
             )                                ~
             multispace?,
-            ||{(entity, attributes)}
+            ||{(table_name, table_cols)}
         ),
         char!('}')
     )
@@ -171,9 +173,9 @@ named! (pub sql_delete <&[u8], (&str, Vec<(&str, &str)> )>,
 );
 */
 #[test]
-fn test_parser_functions(){
+fn test_internal_parser_functions(){
     assert_eq!(
-        key_value(&b"id : String
+        parse_key_value(&b"id : String
                     "[..]),
         //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
         IResult::Done(&b""[..], {("id", "String")})
@@ -181,7 +183,7 @@ fn test_parser_functions(){
 
 
     assert_eq!(
-        key_value(&b"id:'1'
+        parse_key_value(&b"id:'1'
                     "[..]),
         //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
         IResult::Done(&b""[..], {("id", "\'1\'")})
@@ -194,7 +196,7 @@ fn test_parser_functions(){
         {("list", "[String]")}
     ]);
     assert_eq!(
-        attrs(&b"{
+        parse_object_attributes(&b"{
                     id: String
                     name: String
                     homePlanet: String
@@ -213,7 +215,7 @@ fn test_parser_functions(){
         ])
     );
     assert_eq!(
-        table(&b"type Human{
+        parse_object(&b"type Human{
                     id: String
                     name: String
                     homePlanet: String
@@ -223,7 +225,7 @@ fn test_parser_functions(){
 }
 
 #[test]
-fn test_get_object(){
+fn test_get_parser_function(){
     let get_query =
     &b"{
         user (id:1) {
@@ -231,11 +233,11 @@ fn test_get_object(){
         }
     }"[..];
     let get_query_data = IResult::Done(&b""[..], {("user", ("id", "1"), vec![{"name"}])});
-    assert_eq!(sql_select(get_query), get_query_data);
+    assert_eq!(parse_select_query(get_query), get_query_data);
 }
 
 #[test]
-fn test_insert_object(){
+fn test_insert_parser_function(){
     let insert_query =
     &b"{
         Human {
@@ -245,5 +247,5 @@ fn test_insert_object(){
         }
     }"[..];
     let insert_query_data = IResult::Done(&b""[..], {("Human", vec![{("id", "1")}, {("name", "Luke")}, {("homePlanet", "Char")}])});
-    assert_eq!(sql_insert(insert_query), insert_query_data);
+    assert_eq!(parse_insert_query(insert_query), insert_query_data);
 }

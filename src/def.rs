@@ -2,20 +2,18 @@
 use mysql;
 
 use std::error::Error;
-use std::fs::File;
-use std::path::Path;
 use std::vec::Vec;
 use std::str;
 use std::io::prelude::*;
 
+use reader;
 use parser;
-use parser::*;
 use nom::IResult;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DbColumn {
-    name: String,
-    db_type: String
+    pub name: String,
+    pub db_type: String
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -31,42 +29,32 @@ pub struct GraphQLPool {
 }
 
 impl GraphQLPool {
-    //WARNING: it overwrites the given database
     pub fn new (db_conn: &str, db_name: &str, path_name: &str) -> GraphQLPool{
-        let path = Path::new(path_name);
-        let mut file = match File::open(path){
-            Err(why) => panic!("couldn't open {}: {}", path_name,
-                why.description()),
-            Ok(file) => file,
-        };
 
-        let mut db_data = String::new();
-        file.read_to_string(&mut db_data);
+        let db = reader::extract_database_from_file(path_name);
 
-        let db = create_database(db_data);
-
-        let mut query: String = "".to_string();
+        let mut load_table_query: String = "".to_string();
         for table in & db {
             //creates temporary table with auto-generated id
-            //query = query + "DROP TABLE IF EXISTS " + db_name + "." + &table.name + ";\n";
-            query = query + "CREATE TABLE IF NOT EXISTS " + db_name + "." + &table.name; query = query + "(
-                         " + &table.name + "_id int not null DEFAULT '-1'"; for column in &table.columns {query = query + ",
-                         "+ &column.name + " "+ &column.db_type}; query = query +"
+            //load_table_query = load_table_query + "DROP TABLE IF EXISTS " + db_name + "." + &table.name + ";\n";
+            load_table_query = load_table_query + "CREATE TABLE IF NOT EXISTS " + db_name + "." + &table.name; load_table_query = load_table_query + "(
+                         " + &table.name + "_id int not null DEFAULT '-1'"; for column in &table.columns {load_table_query = load_table_query + ",
+                         "+ &column.name + " "+ &column.db_type}; load_table_query = load_table_query +"
                      );\n";
         }
-        println!("{}", query);
+        println!("{}", load_table_query);
 
-        let p = mysql::Pool::new(db_conn).unwrap();
+        let pool = mysql::Pool::new(db_conn).unwrap();
 
-        let mut conn = p.get_conn().unwrap();
+        let mut conn = pool.get_conn().unwrap();
         //conn.query("DROP DATABASE IF EXISTS ".to_string() + db_name).unwrap();
         conn.query("CREATE DATABASE IF NOT EXISTS ".to_string() + db_name).unwrap();
         conn.query("USE ".to_string() + db_name).unwrap();
 
-        conn.query(query).unwrap();
+        conn.query(load_table_query).unwrap();
 
         GraphQLPool{
-            pool: p,
+            pool: pool,
             database: db,
             working_database_name: db_name.to_string()
         }
@@ -74,31 +62,31 @@ impl GraphQLPool {
 
 
     pub fn post (&mut self, query: &str) /*-> Result<T,E>*/ {
-        let query_data = sql_insert(query.as_bytes());
-        match query_data{
-            IResult::Done(input, query_structure) => {
-                //query_structure : (&str, Vec<(&str, &str)> )
-                let last_column = &query_structure.1.last().unwrap();
-                let mut db_query: String = "INSERT INTO ".to_string() + &(self.working_database_name) + "." + query_structure.0 + "(";
+        let insert_query_data = parser::parse_insert_query(query.as_bytes());
+        match insert_query_data{
+            IResult::Done(input, insert_structure) => {
+                //insert_structure : (&str, Vec<(&str, &str)> )
+                let last_column = &insert_structure.1.last().unwrap();
+                let mut mysql_insert: String = "INSERT INTO ".to_string() + &(self.working_database_name) + "." + insert_structure.0 + "(";
                                         /*COLUMNS*/
-                                        for col in &query_structure.1{
-                                            db_query = db_query + col.0;
-                                            if col.0 != last_column.0 {db_query = db_query + ","};
-                                            db_query = db_query + " ";
+                                        for col in &insert_structure.1{
+                                            mysql_insert = mysql_insert + col.0;
+                                            if col.0 != last_column.0 {mysql_insert = mysql_insert + ","};
+                                            mysql_insert = mysql_insert + " ";
                                         }
 
-                                        db_query = db_query + ")\n" +
+                                        mysql_insert = mysql_insert + ")\n" +
 
                                         "VALUES (";
-                                        for col in &query_structure.1{
-                                            db_query = db_query + "\"" + col.1 + "\"";;
-                                            if col.1 != last_column.1 {db_query = db_query + ","};
-                                            db_query = db_query + " ";
+                                        for col in &insert_structure.1{
+                                            mysql_insert = mysql_insert + "\"" + col.1 + "\"";;
+                                            if col.1 != last_column.1 {mysql_insert = mysql_insert + ","};
+                                            mysql_insert = mysql_insert + " ";
                                         }
-                                        db_query = db_query + ");";
-                println!("Graph_QL_Pool::post:\n{}", db_query);
+                                        mysql_insert = mysql_insert + ");";
+                println!("Graph_QL_Pool::post:\n{}", mysql_insert);
                 let mut conn = self.pool.get_conn().unwrap();
-                conn.query(&db_query).unwrap();
+                conn.query(&mysql_insert).unwrap();
             },
             IResult::Error (cause) => unimplemented!(),
             IResult::Incomplete (size) => unimplemented!()
@@ -108,32 +96,32 @@ impl GraphQLPool {
 
 
     pub fn get (&self, query: &str) -> Vec<String> {
-        let query_data = sql_select(query.as_bytes());
-        match query_data{
+        let select_query_data = parser::parse_select_query(query.as_bytes());
+        match select_query_data{
 
-            IResult::Done(input, query_structure) => {
-                //query_structure : (&str, (&str, &str), Vec<&str>)
+            IResult::Done(input, select_structure) => {
+                //select_structure : (&str, (&str, &str), Vec<&str>)
 
-                let last_column = query_structure.2.last().unwrap();
-                let mut db_query: String = "SELECT ".to_string();
-                                            for col in &query_structure.2{
-                                                db_query = db_query + col;
-                                                if col != last_column {db_query = db_query + ","};
-                                                db_query = db_query + " "
+                let last_column = select_structure.2.last().unwrap();
+                let mut mysql_select: String = "SELECT ".to_string();
+                                            for col in &select_structure.2{
+                                                mysql_select = mysql_select + col;
+                                                if col != last_column {mysql_select = mysql_select + ","};
+                                                mysql_select = mysql_select + " "
                                             }
-                                            db_query = db_query +
+                                            mysql_select = mysql_select +
 
-                                            "FROM " + &(self.working_database_name) + "." + query_structure.0 + " " +
+                                            "FROM " + &(self.working_database_name) + "." + select_structure.0 + " " +
 
-                                            "WHERE " + (query_structure.1).0 + " = " + (query_structure.1).1 + ";";
+                                            "WHERE " + (select_structure.1).0 + " = " + (select_structure.1).1 + ";";
 
-                println!("Graph_QL_Pool::get:\n{}", db_query);
+                println!("Graph_QL_Pool::get:\n{}", mysql_select);
 
                 let mut result = Vec::new();
-                self.pool.prep_exec(db_query, ()).map(|mut result| {
+                self.pool.prep_exec(mysql_select, ()).map(|mut result| {
                     let mut row = result.next().unwrap().unwrap();
                     /*
-                    for col in query_structure.2{
+                    for col in select_structure.2{
                         let data : String = row.take(col).unwrap();
                         result.push(data);
                     }
@@ -185,30 +173,6 @@ impl GraphQLPool {
         let mut conn = self.pool.get_conn().unwrap();
         conn.query("DROP DATABASE IF EXISTS ".to_string() + &(self.working_database_name)).unwrap();
     }
-}
-
-fn create_database (tables_in_string: String) -> Vec<DbTable> {
-    //variables do not live enough, will look at it again later
-
-    let result = parser::database(tables_in_string.as_bytes());
-
-    match result{
-        IResult::Done(input, tables) => {
-            let mut db: Vec<DbTable> = Vec::new();
-            for table in tables {
-                let mut columns: Vec<DbColumn> = Vec::new();
-                for column in table.1 {
-                    columns.push(DbColumn { name: column.0.to_string(), db_type: column.1.to_string() });
-                }
-                db.push(DbTable{ name: table.0.to_string(), columns:columns })
-            }
-            db
-        },
-        IResult::Error (cause) => unimplemented!(),
-        IResult::Incomplete (size) => unimplemented!()
-    }
-
-
 }
 
 // TESTING AREA
