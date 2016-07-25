@@ -286,7 +286,14 @@ fn test_db_creation_and_CRUD () {
     }";
 
     graph_ql_pool.post(add_human_query);
-    graph_ql_pool.get(get_human_query);
+    /*assert_eq!(graph_ql_pool.get(get_human_query),
+"{
+  \"data\": {
+    \"name\": \"Luke\"
+    \"homePlanet\": \"Char\"
+  }
+}"
+    );*/
 
 
     //DROIDS
@@ -300,34 +307,27 @@ fn test_db_creation_and_CRUD () {
             created: 2012-01-01
         }
     }";
-
+    /*
     let get_droid_query =
     "{
-        Human (id:\"1\"){
+        Droid (id:\"1\"){
             name
             age
             primaryFunction
             created
         }
     }";
+    */
+    let get_droid_query =
+    "{
+        Droid (id:\"1\"){
+            name
+            primaryFunction
+        }
+    }";
 
     graph_ql_pool.post(add_droid_query);
-    graph_ql_pool.get(get_droid_query);
+    //graph_ql_pool.get(get_droid_query);
 
     graph_ql_pool.finish();
-/*
-    let selected_users: Vec<User> =
-    graph_ql_pool.pool.prep_exec("SELECT * FROM ".to_string() + DB_NAME + ".user", ())
-        .map(|result| {
-            result.map(|x| x.unwrap()).map(|row| {
-                let (id, name) = my::from_row(row);
-                User {
-                    id: id,
-                    name: name,
-                }
-            }).collect()
-        }).unwrap();
-
-    assert_eq!(users, selected_users);
-*/
 }

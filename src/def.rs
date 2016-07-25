@@ -5,6 +5,7 @@ use mysql;
 use std::vec::Vec;
 use std::str;
 use std::io::prelude::*;
+use std::convert::Into;
 
 use reader;
 use parser;
@@ -38,7 +39,7 @@ impl GraphQLPool {
             //creates temporary table with auto-generated id
             //load_table_query = load_table_query + "DROP TABLE IF EXISTS " + db_name + "." + &table.name + ";\n";
             load_table_query = load_table_query + "CREATE TABLE IF NOT EXISTS " + db_name + "." + &table.name; load_table_query = load_table_query + "(
-                         " + &table.name + "_id int not null DEFAULT '-1'"; for column in &table.columns {load_table_query = load_table_query + ",
+                         " + &table.name + "_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT"; for column in &table.columns {load_table_query = load_table_query + ",
                          "+ &column.name + " "+ &column.db_type}; load_table_query = load_table_query +"
                      );\n";
         }
@@ -98,7 +99,7 @@ impl GraphQLPool {
 
 
 
-    pub fn get (&self, query: &str) -> Vec<String> {
+    pub fn get <T: mysql::FromValue + Into<String>>(&self, query: &str) -> String {
         let select_query_data = parser::parse_select_query(query.as_bytes());
         match select_query_data{
 
@@ -121,24 +122,26 @@ impl GraphQLPool {
 
                 println!("Graph_QL_Pool::get:\n{}", mysql_select);
 
-                let mut result = Vec::new();
+                let mut resulting_object : String = "".to_string();
+
                 self.pool.prep_exec(mysql_select, ()).map(|mut result| {
                     let mut row = result.next().unwrap().unwrap();
-                    /*
-                    for col in select_structure.2{
-                        let data : String = row.take(col).unwrap();
-                        result.push(data);
+                    resulting_object = "{\n  \"data\": {\n".to_string();
+                    for col in &select_structure.2{
+                        let data : T = row.take(*col).unwrap();
+                        resulting_object = resulting_object + "    \"" + col + "\": \"" + &(data.into()) + "\"\n";
                     }
-                    */
+                    resulting_object = resulting_object + "  }\n}";
+                    println!("{}", resulting_object);
+                    /*
                     let name: String = row.take("name").unwrap();
                     let homePlanet: String = row.take("homePlanet").unwrap();
 
                     assert_eq!("Luke", name);
                     assert_eq!("Char", homePlanet);
-                });
-
-                result
-
+                    */
+                    resulting_object
+                }).unwrap()
             },
             IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),
             //IResult::Incomplete (size) => unimplemented!()
