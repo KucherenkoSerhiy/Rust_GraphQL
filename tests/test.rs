@@ -255,7 +255,7 @@ fn test_db_creation () {
         &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
     );
 
-    graph_ql_pool.finish();
+    graph_ql_pool.destroy();
 }
 
 #[test]
@@ -286,14 +286,14 @@ fn test_db_creation_and_CRUD () {
     }";
 
     graph_ql_pool.post(add_human_query);
-    /*assert_eq!(graph_ql_pool.get(get_human_query),
+    assert_eq!(graph_ql_pool.get(get_human_query),
 "{
   \"data\": {
     \"name\": \"Luke\"
     \"homePlanet\": \"Char\"
   }
 }"
-    );*/
+    );
 
 
     //DROIDS
@@ -329,5 +329,5 @@ fn test_db_creation_and_CRUD () {
     graph_ql_pool.post(add_droid_query);
     //graph_ql_pool.get(get_droid_query);
 
-    graph_ql_pool.finish();
+    graph_ql_pool.destroy();
 }
