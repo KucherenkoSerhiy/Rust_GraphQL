@@ -30,6 +30,7 @@ use std::io::prelude::*;
 use std::str;
 use std::str::FromStr;
 use std::vec::Vec;
+use std::option::Option;
 
 use nom::{IResult,digit};
 use nom::IResult::*;
@@ -325,9 +326,14 @@ fn test_db_creation_and_CRUD () {
             primaryFunction
         }
     }";
+    let delete_droid_query =
+    "{
+        Droid (id:\"1\")
+     }";
 
     graph_ql_pool.post(add_droid_query);
-    //graph_ql_pool.get(get_droid_query);
+    graph_ql_pool.get(get_droid_query);
+    graph_ql_pool.delete(delete_droid_query);
 
     graph_ql_pool.destroy();
 }

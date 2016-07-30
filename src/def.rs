@@ -7,6 +7,7 @@ use std::str;
 use std::io::prelude::*;
 use std::convert::Into;
 use std::borrow::Cow;
+use std::option::Option;
 
 use reader;
 use parser;
@@ -146,7 +147,7 @@ impl GraphQLPool {
 
 
 
-    pub fn get (&self, query: &str) -> /*SqlResponse*/ String {
+    pub fn get (&self, query: &str) -> String {
         let select_query_data = parser::parse_select_query(query.as_bytes());
         match select_query_data{
 
@@ -210,34 +211,21 @@ impl GraphQLPool {
             IResult::Incomplete (size) => unimplemented!()
         }
     }
-
-    pub fn delete (&mut self, query: &str) -> Result<T,E> {
-        let insert_query_data = parser::parse_insert_query(query.as_bytes());
-        match insert_query_data{
-            //IResult::Done(input, insert_structure) => {
-            IResult::Done(_, insert_structure) => {
-                //insert_structure : (&str, Vec<(&str, &str)> )
-                let last_column = &insert_structure.1.last().unwrap();
-                let mut mysql_insert: String = "INSERT INTO ".to_string() + &(self.working_database_name) + "." + insert_structure.0 + "(";
-                /*COLUMNS*/
-                for col in &insert_structure.1{
-                    mysql_insert = mysql_insert + col.0;
-                    if col.0 != last_column.0 {mysql_insert = mysql_insert + ","};
-                    mysql_insert = mysql_insert + " ";
+*/
+    pub fn delete (&mut self, query: &str) /*-> Result<T,E>*/ {
+        let delete_query_data = parser::parse_delete_query(query.as_bytes());
+        match delete_query_data{
+            //IResult::Done(input, delete_structure) => {
+            IResult::Done(_, delete_structure) => {
+                //delete_structure : (&str, (&str, &str)
+                let mut mysql_delete: String = "DELETE FROM ".to_string() + &(self.working_database_name) + "." + delete_structure.0 + " ";
+                if let Some(id) = delete_structure.1 {
+                    mysql_delete = mysql_delete + "WHERE " + id.0 + "=" + id.1;
                 }
-
-                mysql_insert = mysql_insert + ")\n" +
-
-                    "VALUES (";
-                for col in &insert_structure.1{
-                    mysql_insert = mysql_insert + "\"" + col.1 + "\"";;
-                    if col.1 != last_column.1 {mysql_insert = mysql_insert + ","};
-                    mysql_insert = mysql_insert + " ";
-                }
-                mysql_insert = mysql_insert + ");";
-                println!("Graph_QL_Pool::post:\n{}", mysql_insert);
+                mysql_delete = mysql_delete + ";";
+                println!("Graph_QL_Pool::post:\n{}", mysql_delete);
                 let mut conn = self.pool.get_conn().unwrap();
-                conn.query(&mysql_insert).unwrap();
+                conn.query(&mysql_delete).unwrap();
             },
             //IResult::Error (cause) => unimplemented!(),
             IResult::Error (_) => unimplemented!(),
@@ -245,7 +233,7 @@ impl GraphQLPool {
             IResult::Incomplete (_) => unimplemented!()
         }
     }
-*/
+
     pub fn destroy (&mut self){
         let mut conn = self.pool.get_conn().unwrap();
         conn.query("DROP DATABASE IF EXISTS ".to_string() + &(self.working_database_name)).unwrap();

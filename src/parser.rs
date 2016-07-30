@@ -4,6 +4,7 @@ use nom::IResult::*;
 
 use std::str;
 use std::vec::Vec;
+use std::option::Option;
 
 use def::*;
 
@@ -177,17 +178,40 @@ named! (pub sql_update <&[u8], (&str, Vec<(&str, &str)> )>,
         char!('}')
     )
 );
+*/
 
-named! (pub sql_delete <&[u8], (&str, Vec<(&str, &str)> )>,
+/*
+{
+    tbl_name (id: 1)
+}
+*/
+named! (pub parse_delete_query <&[u8], (&str, Option<(&str, &str)> )>,
     delimited!(
         char!('{'),
         chain!(
-
+            multispace?                      ~
+            table_name: map_res!(
+                        alphanumeric,
+                        str::from_utf8
+                    )                        ~
+            multispace?                      ~
+            table_cols: delimited!(
+                char!('('),
+                chain!(
+                    multispace?              ~
+                    res: parse_param         ~
+                    multispace?,
+                    ||{res}
+                ),
+                char!(')')
+            )?                               ~
+            multispace?,
+            ||{(table_name, table_cols)}
         ),
         char!('}')
     )
 );
-*/
+
 
 #[test]
 fn test_internal_parser_functions(){
@@ -278,4 +302,21 @@ fn test_insert_parser_function(){
     }"[..];
     insert_query_data = IResult::Done(&b""[..], {("Droid", vec![{("id", "1")}, {("name", "R2D2")}, {("age", "3")}, {("primaryFunction", "Mechanic")}, {("created", "STR_TO_DATE('1-01-2012', '%d-%m-%Y')")}])});
     assert_eq!(parse_insert_query(insert_query), insert_query_data);
+}
+
+#[test]
+fn test_delete_parser_function(){
+    let mut delete_query =
+    &b"{
+        user (id:1)
+    }"[..];
+    let mut delete_query_data = IResult::Done(&b""[..], {("user", Some(("id", "1")))});
+    assert_eq!(parse_delete_query(delete_query), delete_query_data);
+
+    delete_query =
+    &b"{
+        user
+    }"[..];
+    delete_query_data = IResult::Done(&b""[..], {("user", None)});
+    assert_eq!(parse_delete_query(delete_query), delete_query_data);
 }
