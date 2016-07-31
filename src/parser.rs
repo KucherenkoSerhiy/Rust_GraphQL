@@ -96,7 +96,7 @@ named! (pub parse_all_objects <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
 );
 
 /*
-WILL BE USED TO PARSE EVERYTHING IN THE FILE
+WILL BE USED TO PARSE EVERYTHING (Tables, Relations, Enums) IN THE FILE
 named! (pub parse_file <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
     chain!(
         tbl: parse_all_objects,
@@ -168,23 +168,41 @@ named! (pub parse_insert_query <&[u8], (&str, Vec<(&str, &str)> )>,
         char!('}')
     )
 );
-/*
-named! (pub sql_update <&[u8], (&str, Vec<(&str, &str)> )>,
+
+named! (pub parse_update_query <&[u8], (&str, (&str, &str), Vec<(&str, &str)> )>,
     delimited!(
         char!('{'),
         chain!(
-
+            multispace?                      ~
+            table_name: map_res!(
+                        alphanumeric,
+                        str::from_utf8
+                    )                        ~
+            space?                           ~
+            table_params: delimited!(
+                char!('('),
+                parse_param,
+                char!(')')
+            )                                ~
+            space?                           ~
+            table_mutations: delimited!(
+                char!('{'),
+                many0!(chain!(
+                    multispace?              ~
+                    res: parse_field         ~
+                    multispace?,
+                    ||{res}
+                )),
+                char!('}')
+            )                                ~
+            multispace?,
+            ||{(table_name, table_params, table_mutations)}
         ),
         char!('}')
     )
 );
-*/
 
-/*
-{
-    tbl_name (id: 1)
-}
-*/
+
 named! (pub parse_delete_query <&[u8], (&str, Option<(&str, &str)> )>,
     delimited!(
         char!('{'),
@@ -305,6 +323,18 @@ fn test_insert_parser_function(){
 }
 
 #[test]
+fn test_update_parser_function(){
+    let update_query =
+    &b"{
+        Droid (id:1) {
+            age: 4
+        }
+    }"[..];
+    let update_query_data = IResult::Done(&b""[..], {("Droid", ("id", "1"), vec![{("age", "4")}])});
+    assert_eq!(parse_update_query(update_query), update_query_data);
+}
+
+#[test]
 fn test_delete_parser_function(){
     let mut delete_query =
     &b"{
@@ -314,7 +344,7 @@ fn test_delete_parser_function(){
     assert_eq!(parse_delete_query(delete_query), delete_query_data);
 
     delete_query =
-    &b"{
+        &b"{
         user
     }"[..];
     delete_query_data = IResult::Done(&b""[..], {("user", None)});

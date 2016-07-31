@@ -326,6 +326,12 @@ fn test_db_creation_and_CRUD () {
             primaryFunction
         }
     }";
+    let update_droid_query =
+    "{
+        Droid (id:1) {
+            age: 4
+        }
+    }";
     let delete_droid_query =
     "{
         Droid (id:\"1\")
@@ -333,6 +339,8 @@ fn test_db_creation_and_CRUD () {
 
     graph_ql_pool.post(add_droid_query);
     graph_ql_pool.get(get_droid_query);
+    graph_ql_pool.update(update_droid_query);
+    //graph_ql_pool.get(get_droid_query);
     graph_ql_pool.delete(delete_droid_query);
 
     graph_ql_pool.destroy();

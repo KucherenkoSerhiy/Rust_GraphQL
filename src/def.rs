@@ -13,52 +13,6 @@ use reader;
 use parser;
 use nom::IResult;
 
-pub type CowStr = Cow<'static, str>;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum ColumnType {
-    SqlASCII(Option<CowStr>),
-    SqlBigInt(Option<i64>),
-    SqlBlob(Option<Vec<u8>>),
-    SqlBoolean(Option<bool>),
-    SqlCounter(Option<i64>),
-    SqlDouble(Option<f64>),
-    SqlFloat(Option<f32>),
-    SqlTimestamp(Option<u64>),
-    SqlVarchar(Option<CowStr>),
-    SqlObject(Option<SqlRows>),
-    SqlUnknown,
-}
-
-#[derive(Debug,Clone,PartialEq)]
-pub struct SqlRow {
-    pub cols: Vec<ColumnType>
-}
-
-#[derive(Debug,Clone,PartialEq)]
-pub struct SqlRows {
-    pub rows: Vec<SqlRow>
-}
-
-#[derive(Debug,PartialEq)]
-pub enum SqlResponse {
-    ResponseError(u32, CowStr),
-    //ResponseReady,
-    //ResponseAuthenticate(CowStr),
-    //ResponseAuthChallenge(Vec<u8>),
-    //ResponseAuthSuccess(Vec<u8>),
-    //ResponseEvent(SqlEvent),
-
-    //ResultVoid,
-    ResultRows(SqlRows),
-    ResultKeyspace(CowStr),
-    //ResultPrepared(SqlPreparedStat),
-    //ResultSchemaChange(CowStr, CowStr, CowStr),
-    ResultUnknown,
-
-    ResponseEmpty,
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct DbColumn {
     pub name: String,
@@ -109,6 +63,56 @@ impl GraphQLPool {
         }
     }
 
+    pub fn get (&self, query: &str) -> String {
+        let select_query_data = parser::parse_select_query(query.as_bytes());
+        match select_query_data{
+
+            //IResult::Done(input, select_structure) => {
+            IResult::Done(_, select_structure) => {
+                //select_structure : (&str, (&str, &str), Vec<&str>)
+
+                let last_column = select_structure.2.last().unwrap();
+                let mut mysql_select: String = "SELECT ".to_string();
+                for col in &select_structure.2{
+                    mysql_select = mysql_select + col;
+                    if col != last_column {mysql_select = mysql_select + ","};
+                    mysql_select = mysql_select + " "
+                }
+                mysql_select = mysql_select +
+
+                    "FROM " + &(self.working_database_name) + "." + select_structure.0 + " " +
+
+                    "WHERE " + (select_structure.1).0 + " = " + (select_structure.1).1 + ";";
+
+                println!("Graph_QL_Pool::get:\n{}", mysql_select);
+
+                let mut resulting_object : String = "".to_string();
+
+                self.pool.prep_exec(mysql_select, ()).map(|mut result| {
+                    let mut row = result.next().unwrap().unwrap();
+
+                    resulting_object = "{\n  \"data\": {\n".to_string();
+                    for col in &select_structure.2{
+                        //let data : ColumnType = row.take(*col).unwrap();
+                        let data : String = row.take(*col).unwrap();
+                        match data {
+                            _ => resulting_object = resulting_object + "    \"" + col + "\": \"" + &data + "\"\n"
+                        };
+                    }
+                    resulting_object = resulting_object + "  }\n}";
+                    println!("{}", resulting_object);
+                    //let name: String = row.take("name").unwrap();
+                    resulting_object
+
+                }).unwrap()
+
+            },
+            IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),
+            //IResult::Incomplete (size) => unimplemented!()
+            IResult::Incomplete (_) => unimplemented!()
+        }
+
+    }
 
     pub fn post (&mut self, query: &str) /*-> Result<T,E>*/ {
         let insert_query_data = parser::parse_insert_query(query.as_bytes());
@@ -145,73 +149,33 @@ impl GraphQLPool {
         }
     }
 
+    pub fn update (&mut self, query: &str) /*-> Result<T,E>*/ {
+        let update_query_data = parser::parse_update_query(query.as_bytes());
+        match update_query_data{
+            //IResult::Done(input, update_structure) => {
+            IResult::Done(_, update_structure) => {
+                //update_structure : (&str, (&str, &str), Vec<(&str, &str)> )
+                let last_column = &update_structure.2.last().unwrap();
+                let mut mysql_update: String = "UPDATE ".to_string() + &(self.working_database_name) + "." + update_structure.0 + " SET ";
+                /*COLUMNS*/
+                for col in &update_structure.2{
+                    mysql_update = mysql_update + col.0 + " = " + col.1;
+                    if col.0 != last_column.0 {mysql_update = mysql_update + ","};
+                    mysql_update = mysql_update + " ";
+                }
 
-
-    pub fn get (&self, query: &str) -> String {
-        let select_query_data = parser::parse_select_query(query.as_bytes());
-        match select_query_data{
-
-            //IResult::Done(input, select_structure) => {
-            IResult::Done(_, select_structure) => {
-                //select_structure : (&str, (&str, &str), Vec<&str>)
-
-                let last_column = select_structure.2.last().unwrap();
-                let mut mysql_select: String = "SELECT ".to_string();
-                                            for col in &select_structure.2{
-                                                mysql_select = mysql_select + col;
-                                                if col != last_column {mysql_select = mysql_select + ","};
-                                                mysql_select = mysql_select + " "
-                                            }
-                                            mysql_select = mysql_select +
-
-                                            "FROM " + &(self.working_database_name) + "." + select_structure.0 + " " +
-
-                                            "WHERE " + (select_structure.1).0 + " = " + (select_structure.1).1 + ";";
-
-                println!("Graph_QL_Pool::get:\n{}", mysql_select);
-
-                let mut resulting_object : String = "".to_string();
-
-                self.pool.prep_exec(mysql_select, ()).map(|mut result| {
-                    let mut row = result.next().unwrap().unwrap();
-
-                    resulting_object = "{\n  \"data\": {\n".to_string();
-                    for col in &select_structure.2{
-                        //let data : ColumnType = row.take(*col).unwrap();
-                        let data : String = row.take(*col).unwrap();
-                        match data {
-                            _ => resulting_object = resulting_object + "    \"" + col + "\": \"" + &data + "\"\n"
-                        };
-                    }
-                    resulting_object = resulting_object + "  }\n}";
-                    println!("{}", resulting_object);
-                    //let name: String = row.take("name").unwrap();
-                    resulting_object
-
-                }).unwrap()
-
+                mysql_update = mysql_update + "WHERE " + (update_structure.1).0 + " = " + (update_structure.1).1 + ";";
+                println!("Graph_QL_Pool::post:\n{}", mysql_update);
+                let mut conn = self.pool.get_conn().unwrap();
+                conn.query(&mysql_update).unwrap();
             },
-            IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),
+            //IResult::Error (cause) => unimplemented!(),
+            IResult::Error (_) => unimplemented!(),
             //IResult::Incomplete (size) => unimplemented!()
             IResult::Incomplete (_) => unimplemented!()
         }
-
     }
 
-/*
-    pub fn update (&mut self, query: &str) -> Result<T,E> {
-        let query_data = sql_update(query);
-        match query_data{
-            IResult::Done(input, query_structure) => {
-                //query_structure = {(&b"user"[..], ("id", "1"), &b"name"[..])}
-                let mut query: String = UPDATE t1 SET col1 = col1 + 1;;
-                p.prep_exec(&query, ()).unwrap();
-            },
-            IResult::Error (cause) => unimplemented!(),
-            IResult::Incomplete (size) => unimplemented!()
-        }
-    }
-*/
     pub fn delete (&mut self, query: &str) /*-> Result<T,E>*/ {
         let delete_query_data = parser::parse_delete_query(query.as_bytes());
         match delete_query_data{
