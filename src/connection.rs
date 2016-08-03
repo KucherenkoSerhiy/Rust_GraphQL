@@ -1,54 +1,81 @@
 use eventual::{Future, Async, Complete};
 use mio;
 use mio::util::Slab;
-use mio::tcp::{TcpStream, TcpListener};
+use mio::tcp::*;
 use mio::{Token,EventLoop, Sender, TryRead, TryWrite, EventSet, PollOpt, Handler};
 use std::{mem, str};
 use std::net::{SocketAddr,IpAddr,Ipv4Addr};
 use std::io::Error;
-use std::collections::{VecDeque,BTreeMap};
+use std::collections::{VecDeque,BTreeMap, HashMap};
 use std::io;
 use std::io::ErrorKind;
 use bytes::buf::ByteBuf;
 use log::LogLevel;
 
-struct Server {
-    // Listening socket for our server.
-    sock: TcpListener,
-
-    // We keep track of server token here instead of doing `const SERVER = Token(0)`.
-    token: Token,
-
-    // A list of connections _accepted_ by our server. This commonly referred to as the
-    // _connection slab_.
-    conns: Slab<Connection>,
-
+struct WebSocketServer {
+    socket: TcpListener,
+    clients: HashMap<Token, TcpStream>,
+    token_counter: usize
 }
 
-impl Handler for Server {
-    type Timeout = ();
+const SERVER_TOKEN: Token = Token(0);
+
+impl Handler for WebSocketServer {
+    type Timeout = usize;
     type Message = ();
 
-    fn ready(&mut self, event_loop: &mut EventLoop<Server>, token: Token, events: EventSet) {
-        if events.is_readable() {
-            if self.token == token {
-                //self.accept(event_loop);
-            } else {
+    fn ready(&mut self, event_loop: &mut EventLoop<WebSocketServer>,
+             token: Token, events: EventSet)
+    {
+        match token {
+            SERVER_TOKEN => {
+                let client_socket = match self.socket.accept() {
+                    Err(e) => {
+                        println!("Accept error: {}", e);
+                        return;
+                    },
+                    Ok(None) => unreachable!("Accept has returned 'None'"),
+                    Ok(Some((sock, addr))) => sock
+                };
 
-                /*self.readable(event_loop, token)
-                    .and_then(|_| self.find_connection_by_token(token).reregister(event_loop))
-                    .unwrap_or_else(|e| {
-                        warn!("Read event failed for {:?}: {:?}", token, e);
-                        self.reset_connection(event_loop, token);
-                    });*/
+                self.token_counter += 1;
+                let new_token = Token(self.token_counter);
+
+                self.clients.insert(new_token, client_socket);
+                event_loop.register(&self.clients[&new_token],
+                                    new_token, EventSet::readable(),
+                                    PollOpt::edge() | PollOpt::oneshot()).unwrap();
+            }
+            token => {
+                let mut client = self.clients.get_mut(&token).unwrap();
+                client.read();
+                event_loop.reregister(&client.socket, token, EventSet::readable(),
+                                      PollOpt::edge() | PollOpt::oneshot()).unwrap();
             }
         }
     }
 }
+    #[test]
+    fn new ()/* -> WebSocketServer*/{
+        let mut event_loop = EventLoop::new().unwrap();
+        let address = "0.0.0.0:10000".parse::<SocketAddr>().unwrap();
+        let server_socket = TcpListener::bind(&address).unwrap();
+
+        let mut server = WebSocketServer {
+            token_counter: 1,        // Starting the token counter from 1
+            clients: HashMap::new(), // Creating an empty HashMap
+            socket: server_socket    // Handling the ownership of the socket to the struct
+        };
+
+        event_loop.register(&server.socket,
+                            SERVER_TOKEN,
+                            EventSet::readable(),
+                            PollOpt::edge()).unwrap();
+        event_loop.run(&mut server).unwrap();
+    }
 
 
-
-
+/*
 #[derive(Debug)]
 pub struct Connection {
     // The connection's TCP socket
@@ -210,3 +237,4 @@ impl Connection {
         })
     }
 }
+*/

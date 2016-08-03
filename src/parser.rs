@@ -8,29 +8,6 @@ use std::option::Option;
 
 use def::*;
 
-/*
-GLOSSARY
-word = constant word
-%variable% = variable word
-'c' = one letter c
-*/
-
-
-/*
-INPUT
-type ' ' %table_name% '{'
-    %column_name% ':' %column_type%
-    %column_name% ':' %column_type%
-    ...
-'}'
-
-OUTPUT
-    r"CREATE TEMPORARY TABLE %table_name% (
-        %column_name%  %column_type%,
-        %column_name%  %column_type%,
-    )"
-*/
-
 named!(parse_param <&[u8],(&str,&str)>,
   chain!(
     key: map_res!(alphanumeric, str::from_utf8) ~
@@ -344,7 +321,7 @@ fn test_delete_parser_function(){
     assert_eq!(parse_delete_query(delete_query), delete_query_data);
 
     delete_query =
-        &b"{
+    &b"{
         user
     }"[..];
     delete_query_data = IResult::Done(&b""[..], {("user", None)});

@@ -287,13 +287,9 @@ fn test_db_creation_and_CRUD () {
     }";
 
     graph_ql_pool.post(add_human_query);
-    assert_eq!(graph_ql_pool.get(get_human_query),
-"{
-  \"data\": {
-    \"name\": \"Luke\"
-    \"homePlanet\": \"Char\"
-  }
-}"
+    assert_eq!(
+        graph_ql_pool.get(get_human_query),
+        "{\n  \"data\": {\n    \"name\": \"Luke\"\n    \"homePlanet\": \"Char\"\n  }\n}"
     );
 
 
@@ -338,9 +334,14 @@ fn test_db_creation_and_CRUD () {
      }";
 
     graph_ql_pool.post(add_droid_query);
-    graph_ql_pool.get(get_droid_query);
+    let mut selected_droid = graph_ql_pool.get(get_droid_query);
+    println!("{}", selected_droid);
+
     graph_ql_pool.update(update_droid_query);
-    //graph_ql_pool.get(get_droid_query);
+    graph_ql_pool.get(get_droid_query);
+    selected_droid = graph_ql_pool.get(get_droid_query);
+    println!("{}", selected_droid);
+
     graph_ql_pool.delete(delete_droid_query);
 
     graph_ql_pool.destroy();
