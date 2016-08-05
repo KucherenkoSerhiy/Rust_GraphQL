@@ -38,16 +38,6 @@ impl ConnectionPool {
         }
     }
 
-    fn register(&mut self, event_loop: &mut EventLoop<ConnectionPool>) -> io::Result<()> {
-        event_loop.register(
-            &self.socket,
-            SERVER_TOKEN,
-            EventSet::readable(),
-            PollOpt::edge() | PollOpt::oneshot()
-        ).or_else(|e| {
-            Err(e)
-        })
-    }
 /*
     fn create_connection(&mut self,event_loop: &mut EventLoop<ConnectionPool>,address:&IpAddr) -> RCResult<Token>{
         //println!("[ConnectionPool::create_connection]");
@@ -84,7 +74,7 @@ impl ConnectionPool {
         self.connections.contains(token)
     }
 */
-    fn find_connection_by_token(&mut self,token: Token) -> Result<&mut Connection,&'static str>{
+    fn find_connection_by_token(&mut self, token: Token) -> Result<&mut Connection,&'static str>{
         println!("[ConnectionPool::find_connection_by_token]");
         if !self.connections.is_empty() {
             let conn = Ok(self.connections.get_mut(token).unwrap());
@@ -105,30 +95,48 @@ impl Handler for ConnectionPool {
              token: Token,
              events: EventSet)
     {
-        match token {
-            SERVER_TOKEN => {
-                let client_socket = match self.socket.accept() {
-                    Err(e) => {
-                        println!("Accept error: {}", e);
-                        return;
-                    },
-                    Ok(None) => unreachable!("Accept has returned 'None'"),
-                    Ok(Some((sock, addr))) => sock
-                };
+        // A read event for our `Server` token means we are establishing a new connection.
+        // A read event for any other token should be handed off to that connection.
+        if events.is_readable() {
+            match token {
+                SERVER_TOKEN => {
+                    let client_socket = match self.socket.accept() {
+                        Err(e) => {
+                            println!("Accept error: {}", e);
+                            return;
+                        },
+                        Ok(None) => unreachable!("Accept has returned 'None'"),
+                        Ok(Some((sock, addr))) => sock
+                    };
 
-                let new_token = Token(self.token_counter);
-                self.token_counter += 1;
+                    let new_token = Token(self.token_counter);
+                    self.token_counter += 1;
+                    let connection = Connection::new(client_socket, new_token);
 
-                self.connections.insert(Connection::new(client_socket, new_token));
-                self.register(event_loop);
-            }
-            token => {
-                /*let mut client = self.connections.get_mut(&token).unwrap();
-                client.read();
-                event_loop.reregister(&client.socket, token, EventSet::readable(),
-                                      PollOpt::edge() | PollOpt::oneshot()).unwrap();*/
+                    self.connections.insert(connection);
+                    event_loop.register(&self.connections[new_token].socket, new_token,
+                        EventSet::readable(), PollOpt::edge() | PollOpt::oneshot()
+                    ).or_else(|e| {
+                        Err(e)
+                    });
+                }
+                token => {
+                    /*
+                    self.readable(event_loop, token)
+                        .and_then(|_| self.find_connection_by_token(token).reregister(event_loop))
+                        .unwrap_or_else(|e| {
+                            warn!("Read event failed for {:?}: {:?}", token, e);
+                            self.reset_connection(event_loop, token);
+                        });
+                    */
+                    /*let mut client = self.connections.get_mut(&token).unwrap();
+                    client.read();
+                    event_loop.reregister(&client.socket, token, EventSet::readable(),
+                                          PollOpt::edge() | PollOpt::oneshot()).unwrap();*/
+                }
             }
         }
+
     }
 }
 
