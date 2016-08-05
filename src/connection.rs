@@ -12,6 +12,34 @@ use std::io::ErrorKind;
 use bytes::buf::ByteBuf;
 use log::LogLevel;
 
+#[derive(Debug)]
+pub struct Connection {
+    // handle to the accepted socket
+    socket: TcpStream,
+
+    // token used to register with the event loop
+    token: Token,
+
+    // set of events we are interested in
+    //interest: EventSet,
+
+    // messages waiting to be sent out
+    //send_queue: Vec<ByteBuf>,
+}
+
+impl Connection {
+    pub fn new(socket:TcpStream, token: Token) -> Connection{
+        Connection {
+            socket: socket,
+            token: token
+        }
+    }
+}
+
+
+
+
+/*
 struct WebSocketServer {
     socket: TcpListener,
     clients: HashMap<Token, TcpStream>,
@@ -237,4 +265,5 @@ impl Connection {
         })
     }
 }
+*/
 */

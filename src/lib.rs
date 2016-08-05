@@ -19,4 +19,5 @@ pub mod serialize;
 pub mod deserialize;
 pub mod def;
 pub mod parser;
-//pub mod connection;
+pub mod connection;
+pub mod connection_pool;
