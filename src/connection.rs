@@ -15,23 +15,100 @@ use log::LogLevel;
 #[derive(Debug)]
 pub struct Connection {
     // handle to the accepted socket
-    socket: TcpStream,
+    pub socket: TcpStream,
 
     // token used to register with the event loop
-    token: Token,
+    pub token: Token,
 
     // set of events we are interested in
-    //interest: EventSet,
+    interest: EventSet,
 
     // messages waiting to be sent out
-    //send_queue: Vec<ByteBuf>,
+    send_queue: Vec<ByteBuf>,
 }
 
 impl Connection {
     pub fn new(socket:TcpStream, token: Token) -> Connection{
         Connection {
             socket: socket,
-            token: token
+            token: token,
+            interest: EventSet::hup(),
+            send_queue: Vec::new(),
+        }
+    }
+
+    fn readable(&mut self) -> io::Result<ByteBuf> {
+
+        let mut recv_buf = ByteBuf::mut_with_capacity(2048);
+
+        // we are PollOpt::edge() and PollOpt::oneshot(), so we _must_ drain
+        // the entire socket receive buffer, otherwise the server will hang.
+        loop {
+            match self.socket.try_read_buf(&mut recv_buf) {
+                // the socket receive buffer is empty, so let's move on
+                // try_read_buf internally handles WouldBLock here too
+                Ok(None) => {
+                    break;
+                },
+                Ok(Some(n)) => {
+                    if n < recv_buf.capacity() {
+                        break;
+                    }
+                },
+                Err(e) => {
+                    error!("Failed to read buffer for token {:?}, error: {}", self.token, e);
+                    return Err(e);
+                }
+            }
+        }
+        // change our type from MutByteBuf to ByteBuf so we can use it to write
+        Ok(recv_buf.flip())
+    }
+
+    fn writable(&mut self) -> io::Result<()> {
+
+        try!(self.send_queue.pop()
+                 .ok_or(Error::new(ErrorKind::Other, "Could not pop send queue"))
+                 .and_then(|mut buf| {
+                     match self.socket.try_write_buf(&mut buf) {
+                         Ok(None) => {
+                             println!("client flushing buf; WouldBlock");
+
+                             // put message back into the queue so we can try again
+                             self.send_queue.push(buf);
+                             Ok(())
+                         },
+                         Ok(Some(n)) => {
+                             println!("CONN : we wrote {} bytes", n);
+                             Ok(())
+                         },
+                         Err(e) => {
+                             error!("Failed to send buffer for {:?}, error: {}", self.token, e);
+                             Err(e)
+                         }
+                     }
+                 })
+        );
+
+        if self.send_queue.is_empty() {
+            self.interest.remove(EventSet::writable());
+        }
+
+        Ok(())
+    }
+
+    pub fn read(&mut self) {
+        loop {
+            let mut buf = [0; 2048];
+            match self.socket.try_read(&mut buf) {
+                Err(e) => return,
+                Ok(None) =>
+                // Socket buffer has got no more bytes.
+                    break,
+                Ok(Some(len)) => {
+                    println!("Connection has read {}", str::from_utf8(&buf[0..len]).unwrap());
+                }
+            }
         }
     }
 }

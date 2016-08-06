@@ -15,17 +15,17 @@ use env_logger;
 use connection::Connection;
 
 
-const SERVER_TOKEN: Token = Token(0);
+pub const SERVER_TOKEN: Token = Token(0);
 
-struct ConnectionPool {
-    socket: TcpListener,
+pub struct ConnectionPool {
+    pub socket: TcpListener,
     token_counter: usize,
     connections: Slab<Connection>
 }
 
 impl ConnectionPool {
 
-    pub fn new(/*event_handler: Sender<CqlEvent>*/) -> ConnectionPool {
+    pub fn new() -> ConnectionPool {
         let addr: SocketAddr = "0.0.0.0:10000".parse::<SocketAddr>()
             .ok().expect("Failed to parse host:port string");
         let server_socket = TcpListener::bind(&addr).ok().expect("Failed to bind address");
@@ -33,8 +33,7 @@ impl ConnectionPool {
         ConnectionPool {
             socket: server_socket,
             connections: Slab::new_starting_at(Token(1), 32768),
-            token_counter: 1
-            //event_handler: event_handler
+            token_counter: 1,
         }
     }
 
@@ -121,18 +120,10 @@ impl Handler for ConnectionPool {
                     });
                 }
                 token => {
-                    /*
-                    self.readable(event_loop, token)
-                        .and_then(|_| self.find_connection_by_token(token).reregister(event_loop))
-                        .unwrap_or_else(|e| {
-                            warn!("Read event failed for {:?}: {:?}", token, e);
-                            self.reset_connection(event_loop, token);
-                        });
-                    */
-                    /*let mut client = self.connections.get_mut(&token).unwrap();
-                    client.read();
-                    event_loop.reregister(&client.socket, token, EventSet::readable(),
-                                          PollOpt::edge() | PollOpt::oneshot()).unwrap();*/
+                    let mut connection = self.connections.get_mut(token).unwrap();
+                    connection.read();
+                    event_loop.reregister(&connection.socket, connection.token, EventSet::readable(),
+                                          PollOpt::edge() | PollOpt::oneshot()).unwrap();
                 }
             }
         }
@@ -140,6 +131,7 @@ impl Handler for ConnectionPool {
     }
 }
 
+/*
 #[test]
 fn test_pool(){
     // Before doing anything, let us register a logger. The mio library has really good logging
@@ -147,5 +139,14 @@ fn test_pool(){
     // figure out why something is not working correctly.
     env_logger::init().ok().expect("Failed to init logger");
 
-    //let mut event_loop = EventLoop::new().ok().expect("Failed to create event loop");
+    let mut event_loop = EventLoop::new().ok().expect("Failed to create event loop");
+    let mut server = ConnectionPool::new();
+
+    event_loop.register(&server.socket,
+                        SERVER_TOKEN,
+                        EventSet::readable(),
+                        PollOpt::edge()).unwrap();
+    event_loop.run(&mut server).unwrap();
+    event_loop.shutdown();
 }
+*/
