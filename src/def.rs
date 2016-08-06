@@ -8,11 +8,14 @@ use std::io::prelude::*;
 use std::convert::Into;
 use std::option::Option;
 
+use mio::{EventLoop, EventSet, PollOpt};
+
 use reader;
 use parser;
 use serialize;
 use deserialize;
 use nom::IResult;
+use connection_pool::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DbColumn {
@@ -26,8 +29,14 @@ pub struct DbTable {
     pub columns: Vec<DbColumn>
 }
 
+pub struct mio_server{
+    connection_pool: ConnectionPool,
+    event_loop: EventLoop<ConnectionPool>
+}
+
 pub struct GraphQLPool {
     pub pool: mysql::Pool,
+    pub async: mio_server,
     pub database: Vec<DbTable>,
     pub working_database_name: String
 }
@@ -46,10 +55,21 @@ impl GraphQLPool {
             conn.query((&(serialize::create_table(db_name.to_string(), &table))).to_string()).unwrap();
         }
 
+        let mut server = ConnectionPool::new();
+        let mut event_loop = EventLoop::new().ok().expect("Failed to create event loop");
+        event_loop.register(&server.socket,
+                            SERVER_TOKEN,
+                            EventSet::readable(),
+                            PollOpt::edge()).unwrap();
+
         GraphQLPool{
             pool: pool,
             database: db,
-            working_database_name: db_name.to_string()
+            working_database_name: db_name.to_string(),
+            async: mio_server{
+                connection_pool:server,
+                event_loop: event_loop
+            }
         }
     }
 
