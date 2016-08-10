@@ -12,7 +12,17 @@ use std::io::ErrorKind;
 use bytes::buf::ByteBuf;
 use log::LogLevel;
 
-#[derive(Debug)]
+pub enum GraphqlMsg{
+    Connect,
+    Request{
+        body: String,
+    },
+    Response{
+        body: String,
+    },
+    Shutdown
+}
+
 pub struct Connection {
     // handle to the accepted socket
     pub socket: TcpStream,
@@ -20,23 +30,36 @@ pub struct Connection {
     // token used to register with the event loop
     pub token: Token,
 
-    // set of events we are interested in
-    interest: EventSet,
-
-    // messages waiting to be sent out
-    send_queue: Vec<ByteBuf>,
+    pub request: GraphqlMsg,
+    pub response: GraphqlMsg,
 }
 
 impl Connection {
-    pub fn new(socket:TcpStream, token: Token) -> Connection{
+    pub fn new(socket:TcpStream, token: Token, request: GraphqlMsg) -> Connection{
         Connection {
             socket: socket,
             token: token,
-            interest: EventSet::hup(),
-            send_queue: Vec::new(),
+            request: request,
+            response: GraphqlMsg::Response{body: "".to_string()},
         }
     }
+/*
+    pub fn connect(address: SocketAddr, event_loop: &mut EventLoop<ConnectionPool>) -> Connection {
 
+
+        let mut conn = Connection::new(socket,version,event_handler);
+        // Once a connection is created we have to register it,
+        // later on we can 'reregister' if necessary
+        conn.register(event_loop,EventSet::writable());
+        let result = conn.send_startup(creds.clone(),event_loop);
+        match result{
+            Ok(_) => Ok(conn),
+            Err(err) => Err(err)
+        }
+
+    }
+*/
+/*
     fn readable(&mut self) -> io::Result<ByteBuf> {
 
         let mut recv_buf = ByteBuf::mut_with_capacity(2048);
@@ -96,7 +119,7 @@ impl Connection {
 
         Ok(())
     }
-
+*/
     pub fn read(&mut self) {
         loop {
             let mut buf = [0; 2048];
@@ -106,11 +129,12 @@ impl Connection {
                 // Socket buffer has got no more bytes.
                     break,
                 Ok(Some(len)) => {
-                    println!("Connection has read {}", str::from_utf8(&buf[0..len]).unwrap());
+                    //println!("Connection has read {}", str::from_utf8(&buf[0..len]).unwrap());
                 }
             }
         }
     }
+
 }
 
 

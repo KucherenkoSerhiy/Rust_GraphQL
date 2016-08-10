@@ -247,6 +247,7 @@ fn test_eventual () {
     assert_eq!(61, res);
 }
 
+/*
 #[test]
 fn test_db_creation () {
     let MYSQL_CONNECTION = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
@@ -258,6 +259,7 @@ fn test_db_creation () {
 
     graph_ql_pool.destroy();
 }
+*/
 
 #[test]
 fn test_db_creation_and_CRUD () {

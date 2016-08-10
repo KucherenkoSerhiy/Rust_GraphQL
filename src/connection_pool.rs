@@ -1,18 +1,19 @@
 use eventual::{Future, Async, Complete};
-use mio::{Token, EventLoop, Sender, TryRead, TryWrite, EventSet, PollOpt, Handler};
+
+use mio::*;
 use mio::tcp::{TcpStream, TcpListener};
 use mio::util::Slab;
-use mio;
 
-use std::net::{SocketAddr,IpAddr,Ipv4Addr};
+use std::net::SocketAddr;
 use std::collections::BTreeMap;
 use std::borrow::Cow;
 use std::error::Error;
 use std::io;
+use std::fmt::Debug;
 
 use env_logger;
 
-use connection::Connection;
+use connection::*;
 
 
 pub const SERVER_TOKEN: Token = Token(0);
@@ -20,7 +21,7 @@ pub const SERVER_TOKEN: Token = Token(0);
 pub struct ConnectionPool {
     pub socket: TcpListener,
     token_counter: usize,
-    connections: Slab<Connection>
+    connections: Slab<Connection>,
 }
 
 impl ConnectionPool {
@@ -38,7 +39,7 @@ impl ConnectionPool {
     }
 
 /*
-    fn create_connection(&mut self,event_loop: &mut EventLoop<ConnectionPool>,address:&IpAddr) -> RCResult<Token>{
+    fn create_connection(&mut self, event_loop: &mut EventLoop<ConnectionPool>,address:&IpAddr) -> RCResult<Token>{
         //println!("[ConnectionPool::create_connection]");
         let mut conn = try_rc!(connect(SocketAddr::new(address.clone(),9042),
                                 None,
@@ -87,19 +88,49 @@ impl ConnectionPool {
 
 impl Handler for ConnectionPool {
     type Timeout = usize;
-    type Message = ();
+    type Message = GraphqlMsg;
+
+    fn notify(&mut self, event_loop: &mut EventLoop<ConnectionPool>, msg: GraphqlMsg) {
+        println!("Got a message!");
+        //self.ready(event_loop, SERVER_TOKEN, EventSet::writable(), msg);
+
+        match msg {
+            GraphqlMsg::Request{..} => {
+                let addr: SocketAddr = "0.0.0.0:10000".parse::<SocketAddr>()
+                    .ok().expect("Failed to parse host:port string");
+                let res = TcpStream::connect(&addr);
+                let mut client_socket = res.ok().expect("Failed to unwrap the socket");
+
+                let new_token = Token(self.token_counter);
+                self.token_counter += 1;
+                let connection = Connection::new(client_socket, new_token, msg);
+
+                self.connections.insert(connection);
+                event_loop.register(&self.connections[new_token].socket, new_token,
+                                    EventSet::readable(), PollOpt::edge() | PollOpt::oneshot()
+                ).or_else(|e| {
+                    Err(e)
+                });
+            },
+            GraphqlMsg::Shutdown => {
+                event_loop.shutdown();
+            }
+            _ => ()
+        }
+    }
 
     fn ready(&mut self,
              event_loop: &mut EventLoop<ConnectionPool>,
              token: Token,
-             events: EventSet)
+             events: EventSet
+            )
     {
         // A read event for our `Server` token means we are establishing a new connection.
         // A read event for any other token should be handed off to that connection.
         if events.is_readable() {
             match token {
                 SERVER_TOKEN => {
-                    let client_socket = match self.socket.accept() {
+                    match self.socket.accept() {
                         Err(e) => {
                             println!("Accept error: {}", e);
                             return;
@@ -107,27 +138,34 @@ impl Handler for ConnectionPool {
                         Ok(None) => unreachable!("Accept has returned 'None'"),
                         Ok(Some((sock, addr))) => sock
                     };
-
-                    let new_token = Token(self.token_counter);
-                    self.token_counter += 1;
-                    let connection = Connection::new(client_socket, new_token);
-
-                    self.connections.insert(connection);
-                    event_loop.register(&self.connections[new_token].socket, new_token,
-                        EventSet::readable(), PollOpt::edge() | PollOpt::oneshot()
-                    ).or_else(|e| {
-                        Err(e)
-                    });
                 }
                 token => {
                     let mut connection = self.connections.get_mut(token).unwrap();
-                    connection.read();
+                    //connection.read();
                     event_loop.reregister(&connection.socket, connection.token, EventSet::readable(),
                                           PollOpt::edge() | PollOpt::oneshot()).unwrap();
                 }
             }
         }
-
+/*
+            GraphqlMsg::Response{..} => {
+                let mut result = self.get_connection_with_ip(event_loop,ip);
+                // Here is where we should do create a new connection if it doesn't exist.
+                // Connect, then send_startup with the queue_message
+                match result {
+                    Ok(conn) =>{
+                        match conn.insert_request(msg){
+                            Ok(_) => conn.reregister(event_loop,EventSet::writable()),
+                            Err(err) => (),
+                        }
+                    },
+                    Err(err) =>{
+                        //TO-DO
+                        //Complete all requests with connection error
+                    }
+                }
+            },
+*/
     }
 }
 

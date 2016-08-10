@@ -7,6 +7,7 @@ use std::str;
 use std::io::prelude::*;
 use std::convert::Into;
 use std::option::Option;
+use std::thread;
 
 use mio::{EventLoop, EventSet, PollOpt};
 
@@ -16,6 +17,7 @@ use serialize;
 use deserialize;
 use nom::IResult;
 use connection_pool::*;
+use connection::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DbColumn {
@@ -29,14 +31,9 @@ pub struct DbTable {
     pub columns: Vec<DbColumn>
 }
 
-pub struct mio_server{
-    connection_pool: ConnectionPool,
-    event_loop: EventLoop<ConnectionPool>
-}
-
 pub struct GraphQLPool {
     pub pool: mysql::Pool,
-    pub async: mio_server,
+    //pub sender: Sender<CqlMsg>,
     pub database: Vec<DbTable>,
     pub working_database_name: String
 }
@@ -56,20 +53,24 @@ impl GraphQLPool {
         }
 
         let mut server = ConnectionPool::new();
-        let mut event_loop = EventLoop::new().ok().expect("Failed to create event loop");
+        let mut event_loop = EventLoop::<ConnectionPool>::new().ok().expect("Failed to create event loop");
         event_loop.register(&server.socket,
                             SERVER_TOKEN,
                             EventSet::readable(),
                             PollOpt::edge()).unwrap();
+        // Only keep the event loop channel
+
+        let sender = event_loop.channel();
+        sender.send(GraphqlMsg::Request{body: "Hello here!".to_string()}).unwrap();
+        thread::Builder::new().name("event_handler".to_string()).spawn(move || {
+            event_loop.run(&mut server).ok().expect("Failed to start event loop");
+        });
+        sender.send(GraphqlMsg::Request{body: "Hello there!".to_string()}).unwrap();
 
         GraphQLPool{
             pool: pool,
             database: db,
             working_database_name: db_name.to_string(),
-            async: mio_server{
-                connection_pool:server,
-                event_loop: event_loop
-            }
         }
     }
 
