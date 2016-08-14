@@ -77,31 +77,6 @@ impl ConnectionPool {
         let token = try_rc!(self.add_connection(address.clone(),conn),"Failed adding a new connection");
         Ok(token)
     }
-
-    fn add_connection(&mut self, address:IpAddr,connection: Connection)-> RCResult<Token>{
-        //println!("[ConnectionPool::add_connection]");
-        let result = self.connections.insert(connection);
-
-        match result{
-            Ok(token) => {
-                {
-                    let conn = self.find_connection_by_token(token).ok().expect("Couldn't unwrap the connection");
-                    //println!("Setting token {:?}",token);
-                    conn.set_token(token);
-                }
-                self.token_by_ip.insert(address,token);
-                Ok(token)
-            },
-            Err(err) => {
-                Err(RCError::new("Credential should be provided for authentication", ReadError))
-            }
-        }
-    }
-
-
-    fn exists_connection_by_token(&mut self,token: Token) -> bool{
-        self.connections.contains(token)
-    }
 */
     fn find_connection_by_token(&mut self, token: Token) -> Result<&mut Connection,&'static str>{
         println!("[ConnectionPool::find_connection_by_token]");
@@ -157,7 +132,7 @@ impl Handler for ConnectionPool {
                 //we're getting response
                 if events.is_readable() {
                     println!("ConnectionPool::ready: ready to read from client");
-                    //connection.read();
+                    self.response_messages.append(&mut connection.get_responses());
                     event_loop.reregister(&connection.socket, connection.token, EventSet::writable(),
                                           PollOpt::edge() | PollOpt::oneshot()).unwrap();
                 }
@@ -178,47 +153,5 @@ impl Handler for ConnectionPool {
                 }
             }
         }
-
-
-
-/*
-            GraphqlMsg::Response{..} => {
-                let mut result = self.get_connection_with_ip(event_loop,ip);
-                // Here is where we should do create a new connection if it doesn't exist.
-                // Connect, then send_startup with the queue_message
-                match result {
-                    Ok(conn) =>{
-                        match conn.insert_request(msg){
-                            Ok(_) => conn.reregister(event_loop,EventSet::writable()),
-                            Err(err) => (),
-                        }
-                    },
-                    Err(err) =>{
-                        //TO-DO
-                        //Complete all requests with connection error
-                    }
-                }
-            },
-*/
     }
 }
-
-/*
-#[test]
-fn test_pool(){
-    // Before doing anything, let us register a logger. The mio library has really good logging
-    // at the _trace_ and _debug_ levels. Having a logger setup is invaluable when trying to
-    // figure out why something is not working correctly.
-    env_logger::init().ok().expect("Failed to init logger");
-
-    let mut event_loop = EventLoop::new().ok().expect("Failed to create event loop");
-    let mut server = ConnectionPool::new();
-
-    event_loop.register(&server.socket,
-                        SERVER_TOKEN,
-                        EventSet::readable(),
-                        PollOpt::edge()).unwrap();
-    event_loop.run(&mut server).unwrap();
-    event_loop.shutdown();
-}
-*/

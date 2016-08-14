@@ -269,10 +269,21 @@ fn test_db_creation_and_CRUD () {
         DB_NAME,
         &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
     );
+/*
+    let get_human_query =
+    "{
+        Human (id:\"1\"){
+            name
+            homePlanet
+        }
+    }";
+    graph_ql_pool.get(get_human_query)
+*/
 
     //HUMANS
     let add_human_query =
-    "{
+    "
+    {
         Human {
             id: 1
             name: Luke
@@ -281,14 +292,15 @@ fn test_db_creation_and_CRUD () {
     }";
 
     let get_human_query =
-    "{
+    "
+    {
         Human (id:\"1\"){
             name
             homePlanet
         }
     }";
 
-    graph_ql_pool.post(add_human_query);
+    graph_ql_pool.add(add_human_query);
     assert_eq!(
         graph_ql_pool.get(get_human_query),
         "{\n  \"data\": {\n    \"name\": \"Luke\"\n    \"homePlanet\": \"Char\"\n  }\n}"
@@ -297,7 +309,8 @@ fn test_db_creation_and_CRUD () {
 
     //DROIDS
     let add_droid_query =
-    "{
+    "
+    {
         Droid {
             id: 1
             name: R2D2
@@ -305,7 +318,8 @@ fn test_db_creation_and_CRUD () {
             primaryFunction: Mechanic
             created: 2012-01-01
         }
-    }";
+    }
+    ";
     /*
     let get_droid_query =
     "{
@@ -318,33 +332,39 @@ fn test_db_creation_and_CRUD () {
     }";
     */
     let get_droid_query =
-    "{
+    "
+    {
         Droid (id:\"1\"){
             name
             primaryFunction
         }
-    }";
+    }
+    ";
     let update_droid_query =
-    "{
+    "
+    {
         Droid (id:1) {
             age: 4
         }
-    }";
+    }
+    ";
     let delete_droid_query =
-    "{
+    "
+    {
         Droid (id:\"1\")
-     }";
+    }
+    ";
 
-    graph_ql_pool.post(add_droid_query);
+    graph_ql_pool.add(add_droid_query);
     let mut selected_droid = graph_ql_pool.get(get_droid_query);
-    println!("{}", selected_droid);
+    //println!("TEST {}", selected_droid);
 
     graph_ql_pool.update(update_droid_query);
-    graph_ql_pool.get(get_droid_query);
     selected_droid = graph_ql_pool.get(get_droid_query);
-    println!("{}", selected_droid);
+    //println!("TEST {}", selected_droid);
 
     graph_ql_pool.delete(delete_droid_query);
 
-    graph_ql_pool.destroy();
+    //graph_ql_pool.destroy_database();
+
 }
