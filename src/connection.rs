@@ -12,9 +12,19 @@ use std::io::ErrorKind;
 use bytes::buf::ByteBuf;
 use log::LogLevel;
 
+use nom::IResult;
+use serialize;
+use deserialize;
+
+use def::TargetPool;
+use parser;
+use connection_pool::*;
+
+
 pub enum GraphqlMsg{
     Connect,
     Request{
+        operation: String,
         body: String,
     },
     Response{
@@ -30,111 +40,201 @@ pub struct Connection {
     // token used to register with the event loop
     pub token: Token,
 
-    pub request: GraphqlMsg,
-    pub response: GraphqlMsg,
+    pub request_messages: Vec<GraphqlMsg>,
+    pub response_messages: Vec<GraphqlMsg>,
+    target: TargetPool
 }
 
 impl Connection {
-    pub fn new(socket:TcpStream, token: Token, request: GraphqlMsg) -> Connection{
+    pub fn new(socket:TcpStream, token: Token, targetPool: TargetPool) -> Connection{
         Connection {
             socket: socket,
             token: token,
-            request: request,
-            response: GraphqlMsg::Response{body: "".to_string()},
+            request_messages: Vec::new(),
+            response_messages: Vec::new(),
+            target: targetPool
         }
     }
-/*
-    pub fn connect(address: SocketAddr, event_loop: &mut EventLoop<ConnectionPool>) -> Connection {
 
-
-        let mut conn = Connection::new(socket,version,event_handler);
-        // Once a connection is created we have to register it,
-        // later on we can 'reregister' if necessary
-        conn.register(event_loop,EventSet::writable());
-        let result = conn.send_startup(creds.clone(),event_loop);
-        match result{
-            Ok(_) => Ok(conn),
-            Err(err) => Err(err)
-        }
-
+    pub fn pushRequest(&mut self, msg: GraphqlMsg) {
+        self.request_messages.push(msg);
     }
-*/
-/*
-    fn readable(&mut self) -> io::Result<ByteBuf> {
 
-        let mut recv_buf = ByteBuf::mut_with_capacity(2048);
-
-        // we are PollOpt::edge() and PollOpt::oneshot(), so we _must_ drain
-        // the entire socket receive buffer, otherwise the server will hang.
-        loop {
-            match self.socket.try_read_buf(&mut recv_buf) {
-                // the socket receive buffer is empty, so let's move on
-                // try_read_buf internally handles WouldBLock here too
-                Ok(None) => {
-                    break;
-                },
-                Ok(Some(n)) => {
-                    if n < recv_buf.capacity() {
-                        break;
+    pub fn process(&mut self){
+        while !self.request_messages.is_empty(){
+            let msg = self.request_messages.remove(0);
+            match msg {
+                GraphqlMsg::Request{operation, body} => {
+                    //println!("Operation {}", operation);
+                    //println!("{}", body);
+                    match operation.as_str(){
+                        "add" => {
+                            self.add(&body);
+                        },
+                        "get" => {
+                            self.get(&body);
+                        },
+                        "update" => {
+                            self.update(&body);
+                        },
+                        "delete" => {
+                            self.delete(&body);
+                        },
+                        _ => panic!("Wrong operation type")
                     }
                 },
-                Err(e) => {
-                    error!("Failed to read buffer for token {:?}, error: {}", self.token, e);
-                    return Err(e);
-                }
+                _ => ()
             }
         }
-        // change our type from MutByteBuf to ByteBuf so we can use it to write
-        Ok(recv_buf.flip())
+
+
+
     }
+/*
+    pub fn write(&mut self, event_loop: &mut EventLoop<ConnectionPool>) {
+        let mut buf = ByteBuf::mut_with_capacity(2048);
 
-    fn writable(&mut self) -> io::Result<()> {
+        match self.socket.try_read_buf(&mut buf) {
+            Ok(Some(0)) => {
+                //println!("read 0 bytes");
+            }
+            Ok(Some(n)) => {
+                self.response.mut_read_buf().extend_from_slice(&buf.bytes());
+                //println!("read {} bytes", n);
+                //println!("Read: {:?}",buf.bytes());
+                self.read(event_loop);  //Recursion here, care
 
-        try!(self.send_queue.pop()
-                 .ok_or(Error::new(ErrorKind::Other, "Could not pop send queue"))
-                 .and_then(|mut buf| {
-                     match self.socket.try_write_buf(&mut buf) {
-                         Ok(None) => {
-                             println!("client flushing buf; WouldBlock");
-
-                             // put message back into the queue so we can try again
-                             self.send_queue.push(buf);
-                             Ok(())
-                         },
-                         Ok(Some(n)) => {
-                             println!("CONN : we wrote {} bytes", n);
-                             Ok(())
-                         },
-                         Err(e) => {
-                             error!("Failed to send buffer for {:?}, error: {}", self.token, e);
-                             Err(e)
-                         }
-                     }
-                 })
-        );
-
-        if self.send_queue.is_empty() {
-            self.interest.remove(EventSet::writable());
+            }
+            Ok(None) => {
+                //println!("Reading buf = None");
+                if !self.are_pendings_send(){
+                    self.reregister(event_loop,EventSet::readable());
+                }
+                    else{
+                    self.reregister(event_loop,EventSet::writable());
+                }
+            }
+            Err(e) => {
+                panic!("got an error trying to read; err={:?}", e);
+            }
         }
-
-        Ok(())
     }
 */
-    pub fn read(&mut self) {
-        loop {
-            let mut buf = [0; 2048];
-            match self.socket.try_read(&mut buf) {
-                Err(e) => return,
-                Ok(None) =>
-                // Socket buffer has got no more bytes.
-                    break,
-                Ok(Some(len)) => {
-                    //println!("Connection has read {}", str::from_utf8(&buf[0..len]).unwrap());
+
+/*
+    pub fn write(&mut self, event_loop: &mut EventLoop<ConnectionPool>) {
+        let mut buf = ByteBuf::mut_with_capacity(2048);
+        //println!("self.pendings.len = {:?}",self.pendings_send.len());
+        match self.pendings_send
+            .pop_back()
+            .unwrap()
+            {
+                CqlMsg::Request{request,tx,address} => {
+                    //println!("Sending a request.");
+                    request.serialize(&mut buf,self.version);
+                    //println!("Sending: {:?}",request);
+                    self.pendings_complete.insert(request.stream,CqlMsg::Request{request:request,tx:tx,address:address});
+                },
+                CqlMsg::Connect{request,tx,address} =>{
+                    //println!("Sending a connect request.");
+                    request.serialize(&mut buf,self.version);
+                    self.pendings_complete.insert(request.stream,CqlMsg::Connect{request:request,tx:tx,address:address});
+                },
+                CqlMsg::Shutdown => {
+                    panic!("Shutdown messages shouldn't be at pendings");
+                },
+            }
+        match self.socket.try_write_buf(&mut buf.flip())
+            {
+                Ok(Some(n)) => {
+                    //println!("Written {} bytes",n);
+                    self.reregister(event_loop,EventSet::readable());
+                }
+                Ok(None) => {
+                    // The socket wasn't actually ready, re-register the socket
+                    // with the event loop
+                    self.reregister(event_loop,EventSet::writable());
+                }
+                Err(e) => {
+                    panic!("got an error trying to read; err={:?}", e);
                 }
             }
+
+        //println!("Ended write");
+    }
+*/
+
+    pub fn get (&self, query: &str) -> String {
+        println!("Graph_QL_Pool::get:\n{}\n---------------------------", query);
+        let select_query_data = parser::parse_select_query(query.as_bytes());
+        match select_query_data{
+            IResult::Done(_, select_structure) => {
+                let mut mysql_select: String = serialize::perform_get((&self.target.working_database_name).to_string(), &select_structure);
+                println!("parsed");
+                deserialize::perform_get(&self.target.pool, mysql_select, &select_structure)
+            },
+            IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),
+            //IResult::Incomplete (size) => unimplemented!()
+            IResult::Incomplete (_) => unimplemented!()
+        }
+
+    }
+
+    pub fn add (&mut self, query: &str) /*-> Result<T,E>*/ {
+        println!("Graph_QL_Pool::add:\n{}\n---------------------------", query);
+        let insert_query_data = parser::parse_insert_query(query.as_bytes());
+        match insert_query_data{
+            //IResult::Done(input, insert_structure) => {
+            IResult::Done(_, insert_structure) => {
+
+                let mut mysql_insert: String = serialize::perform_add_mutation((&self.target.working_database_name).to_string(), &insert_structure);
+                println!("parsed");
+                let mut conn = self.target.pool.get_conn().unwrap();
+                conn.query(&mysql_insert).unwrap();
+            },
+            //IResult::Error (cause) => unimplemented!(),
+            IResult::Error (_) => unimplemented!(),
+            //IResult::Incomplete (size) => unimplemented!()
+            IResult::Incomplete (_) => unimplemented!()
         }
     }
 
+    pub fn update (&mut self, query: &str) /*-> Result<T,E>*/ {
+        println!("Graph_QL_Pool::update:\n{}\n---------------------------", query);
+        let update_query_data = parser::parse_update_query(query.as_bytes());
+        match update_query_data{
+            //IResult::Done(input, update_structure) => {
+            IResult::Done(_, update_structure) => {
+                let mut mysql_update: String = serialize::perform_update_mutation((&self.target.working_database_name).to_string(), &update_structure);
+
+                println!("parsed");
+                let mut conn = self.target.pool.get_conn().unwrap();
+                conn.query(&mysql_update).unwrap();
+            },
+            //IResult::Error (cause) => unimplemented!(),
+            IResult::Error (_) => unimplemented!(),
+            //IResult::Incomplete (size) => unimplemented!()
+            IResult::Incomplete (_) => unimplemented!()
+        }
+    }
+
+    pub fn delete (&mut self, query: &str) /*-> Result<T,E>*/ {
+        println!("Graph_QL_Pool::delete:\n{}\n---------------------------", query);
+        let delete_query_data = parser::parse_delete_query(query.as_bytes());
+        match delete_query_data{
+            //IResult::Done(input, delete_structure) => {
+            IResult::Done(_, delete_structure) => {
+                let mut mysql_delete: String = serialize::perform_delete_mutation((&self.target.working_database_name).to_string(), &delete_structure);
+                println!("parsed");
+                let mut conn = self.target.pool.get_conn().unwrap();
+                conn.query(&mysql_delete).unwrap();
+            },
+            //IResult::Error (cause) => unimplemented!(),
+            IResult::Error (_) => unimplemented!(),
+            //IResult::Incomplete (size) => unimplemented!()
+            IResult::Incomplete (_) => unimplemented!()
+        }
+    }
 }
 
 
@@ -293,37 +393,7 @@ impl Connection {
     /// in write events.
     /// TODO: Figure out if sending more than one message is optimal. Maybe we should be trying to
     /// flush until the kernel sends back EAGAIN?
-    fn writable(&mut self) -> io::Result<()> {
 
-        try!(self.send_queue.pop()
-                 .ok_or(Error::new(ErrorKind::Other, "Could not pop send queue"))
-                 .and_then(|mut buf| {
-                     match self.socket.try_write_buf(&mut buf) {
-                         Ok(None) => {
-                             debug!("client flushing buf; WouldBlock");
-
-                             // put message back into the queue so we can try again
-                             self.send_queue.push(buf);
-                             Ok(())
-                         },
-                         Ok(Some(n)) => {
-                             debug!("CONN : we wrote {} bytes", n);
-                             Ok(())
-                         },
-                         Err(e) => {
-                             error!("Failed to send buffer for {:?}, error: {}", self.token, e);
-                             Err(e)
-                         }
-                     }
-                 })
-        );
-
-        if self.send_queue.is_empty() {
-            self.interest.remove(EventSet::writable());
-        }
-
-        Ok(())
-    }
 
     /// Queue an outgoing message to the client.
     ///

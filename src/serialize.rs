@@ -37,7 +37,7 @@ pub fn perform_get(db_name: String, select_structure : &(&str, (&str, &str), Vec
     mysql_select
 }
 
-pub fn perform_post_mutation(db_name: String, insert_structure : &(&str, Vec<(&str, &str)> )) -> String{
+pub fn perform_add_mutation(db_name: String, insert_structure : &(&str, Vec<(&str, &str)> )) -> String{
     let last_column = &insert_structure.1.last().unwrap();
 
     let mut mysql_insert: String = "INSERT INTO ".to_string() + &db_name + "." + insert_structure.0 + "(";

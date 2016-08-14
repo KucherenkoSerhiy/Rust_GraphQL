@@ -82,128 +82,175 @@ named! (pub parse_file <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
 );
 */
 
+
+
+
+/*
+mutation {
+  delete  (id: 1234) {
+    status
+  }
+}
+*/
+/*
+named!(parse_query_type <&[u8], Option<&[u8]> >,
+    chain!(
+        operation: tag!("mutation")? ~
+        multispace?,
+        ||{operation}
+    )
+);
+
+named!(parse_mutation_type <&[u8], Option<&[u8]> >,
+    chain!(
+        mutation_type: alt!(tag!("abcd") | tag!("efgh")) ~
+        space?,
+        ||{mutation_type}
+    )
+);
+*/
 named! (pub parse_select_query <&[u8], (&str, (&str, &str), Vec<&str>)>,
-    delimited!(
-        char!('{'),
-        chain!(
-            multispace?                      ~
-            table_name: map_res!(
-                        alphanumeric,
-                        str::from_utf8
-                    )                        ~
-            space?                           ~
-            table_params: delimited!(
-                char!('('),
-                parse_param,
-                char!(')')
-            )                                ~
-            space?                           ~
-            table_cols: delimited!(
-                char!('{'),
-                many0!(chain!(
-                    multispace?              ~
-                    result: map_res!(
-                        alphanumeric,
-                        str::from_utf8
-                    )                        ~
-                    multispace?,
-                    ||{result}
-                )),
-                char!('}')
-            )                                ~
-            multispace?,
-            ||{(table_name, table_params, table_cols)}
-        ),
-        char!('}')
+    chain!(
+        multispace?                              ~
+        res: delimited!(
+            char!('{'),
+            chain!(
+                multispace?                      ~
+                table_name: map_res!(
+                            alphanumeric,
+                            str::from_utf8
+                        )                        ~
+                space?                           ~
+                table_params: delimited!(
+                    char!('('),
+                    parse_param,
+                    char!(')')
+                )                                ~
+                space?                           ~
+                table_cols: delimited!(
+                    char!('{'),
+                    many0!(chain!(
+                        multispace?              ~
+                        result: map_res!(
+                            alphanumeric,
+                            str::from_utf8
+                        )                        ~
+                        multispace?,
+                        ||{result}
+                    )),
+                    char!('}')
+                )                                ~
+                multispace?,
+                ||{(table_name, table_params, table_cols)}
+            ),
+            char!('}')
+        )                                        ~
+        multispace?,
+        ||{res}
     )
 );
 
 
 named! (pub parse_insert_query <&[u8], (&str, Vec<(&str, &str)> )>,
-    delimited!(
-        char!('{'),
-        chain!(
-            multispace?                      ~
-            table_name: map_res!(
-                        alphanumeric,
-                        str::from_utf8
-                    )                        ~
-            multispace?                      ~
-            table_cols: delimited!(
-                char!('{'),
-                many0!(chain!(
-                    multispace?              ~
-                    res: parse_field         ~
-                    multispace?,
-                    ||{res}
-                )),
-                char!('}')
-            )                                ~
-            multispace?,
-            ||{(table_name, table_cols)}
-        ),
-        char!('}')
+    chain!(
+        multispace?                              ~
+        res: delimited!(
+            char!('{'),
+            chain!(
+                multispace?                      ~
+                table_name: map_res!(
+                            alphanumeric,
+                            str::from_utf8
+                        )                        ~
+                multispace?                      ~
+                table_cols: delimited!(
+                    char!('{'),
+                    many0!(chain!(
+                        multispace?              ~
+                        res: parse_field         ~
+                        multispace?,
+                        ||{res}
+                    )),
+                    char!('}')
+                )                                ~
+                multispace?,
+                ||{(table_name, table_cols)}
+            ),
+            char!('}')
+        )                                        ~
+        multispace?,
+        ||{res}
     )
 );
 
 named! (pub parse_update_query <&[u8], (&str, (&str, &str), Vec<(&str, &str)> )>,
-    delimited!(
-        char!('{'),
-        chain!(
-            multispace?                      ~
-            table_name: map_res!(
-                        alphanumeric,
-                        str::from_utf8
-                    )                        ~
-            space?                           ~
-            table_params: delimited!(
-                char!('('),
-                parse_param,
-                char!(')')
-            )                                ~
-            space?                           ~
-            table_mutations: delimited!(
-                char!('{'),
-                many0!(chain!(
-                    multispace?              ~
-                    res: parse_field         ~
-                    multispace?,
-                    ||{res}
-                )),
-                char!('}')
-            )                                ~
-            multispace?,
-            ||{(table_name, table_params, table_mutations)}
-        ),
-        char!('}')
+    chain!(
+        multispace?                              ~
+        res: delimited!(
+            char!('{'),
+            chain!(
+                multispace?                      ~
+                table_name: map_res!(
+                            alphanumeric,
+                            str::from_utf8
+                        )                        ~
+                space?                           ~
+                table_params: delimited!(
+                    char!('('),
+                    parse_param,
+                    char!(')')
+                )                                ~
+                space?                           ~
+                table_mutations: delimited!(
+                    char!('{'),
+                    many0!(chain!(
+                        multispace?              ~
+                        res: parse_field         ~
+                        multispace?,
+                        ||{res}
+                    )),
+                    char!('}')
+                )                                ~
+                multispace?,
+                ||{(table_name, table_params, table_mutations)}
+            ),
+            char!('}')
+        )                                        ~
+        multispace?,
+        ||{res}
     )
 );
 
 
 named! (pub parse_delete_query <&[u8], (&str, Option<(&str, &str)> )>,
-    delimited!(
-        char!('{'),
-        chain!(
-            multispace?                      ~
-            table_name: map_res!(
-                        alphanumeric,
-                        str::from_utf8
-                    )                        ~
-            multispace?                      ~
-            table_cols: delimited!(
-                char!('('),
-                chain!(
-                    multispace?              ~
-                    res: parse_param         ~
-                    multispace?,
-                    ||{res}
-                ),
-                char!(')')
-            )?                               ~
-            multispace?,
-            ||{(table_name, table_cols)}
-        ),
-        char!('}')
+    chain!(
+        multispace?                              ~
+        res: delimited!(
+            char!('{'),
+            chain!(
+                multispace?                      ~
+                table_name: map_res!(
+                            alphanumeric,
+                            str::from_utf8
+                        )                        ~
+                multispace?                      ~
+                table_cols: delimited!(
+                    char!('('),
+                    chain!(
+                        multispace?              ~
+                        res: parse_param         ~
+                        multispace?,
+                        ||{res}
+                    ),
+                    char!(')')
+                )?                               ~
+                multispace?,
+                ||{(table_name, table_cols)}
+            ),
+            char!('}')
+        )                                        ~
+        multispace?,
+        ||{res}
     )
 );
 
