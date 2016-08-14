@@ -26,6 +26,7 @@ pub enum GraphqlMsg{
     Request{
         operation: String,
         body: String,
+        tx: Complete<String,()>,
     },
     Response{
         body: String,
@@ -64,7 +65,7 @@ impl Connection {
         while !self.request_messages.is_empty(){
             let msg = self.request_messages.remove(0);
             match msg {
-                GraphqlMsg::Request{operation, body} => {
+                GraphqlMsg::Request{operation, body, tx} => {
                     //println!("Operation {}", operation);
                     //println!("{}", body);
                     let response_body = match operation.as_str(){
@@ -82,7 +83,8 @@ impl Connection {
                         },
                         _ => panic!("Wrong operation type")
                     };
-                    self.response_messages.push(GraphqlMsg::Response{body: response_body});
+                    self.response_messages.push(GraphqlMsg::Response{body: response_body.clone()});
+                    tx.complete(response_body);
                 },
                 _ => panic!("Type of message not expected")
             }
@@ -130,7 +132,7 @@ impl Connection {
             //IResult::Incomplete (size) => unimplemented!()
             IResult::Incomplete (_) => unimplemented!()
         }
-        "add response".to_string()
+        "add response completed".to_string()
     }
 
     pub fn update (&mut self, query: &str) -> String {
@@ -150,7 +152,7 @@ impl Connection {
             //IResult::Incomplete (size) => unimplemented!()
             IResult::Incomplete (_) => unimplemented!()
         }
-        "update response".to_string()
+        "update response completed".to_string()
     }
 
     pub fn delete (&mut self, query: &str) -> String {
@@ -169,6 +171,6 @@ impl Connection {
             //IResult::Incomplete (size) => unimplemented!()
             IResult::Incomplete (_) => unimplemented!()
         }
-        "delete response".to_string()
+        "delete response completed".to_string()
     }
 }

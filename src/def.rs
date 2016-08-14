@@ -1,6 +1,3 @@
-//#[macro_use]
-use mysql;
-
 //use std::error::Error;
 use std::vec::Vec;
 use std::str;
@@ -8,7 +5,9 @@ use std::io::prelude::*;
 use std::convert::Into;
 use std::option::Option;
 
+use mysql;
 use mio::{EventLoop, EventSet, PollOpt, Sender};
+use eventual::Future;
 use nom::IResult;
 
 use reader;
@@ -73,46 +72,45 @@ impl GraphQLPool {
         }
     }
 
-    pub fn get (&self, query: &str) -> String {
-        /*
-        self.sender.send(GraphqlMsg::Request{
-            operation: "get".to_string(),
-            body: query.to_string()
-        }).unwrap();
-        */
-        let select_query_data = parser::parse_select_query(query.as_bytes());
-        match select_query_data{
-            IResult::Done(_, select_structure) => {
-                let mut mysql_select: String = serialize::perform_get((&self.working_database_name).to_string(), &select_structure);
-                println!("DEF:RS: Graph_QL_Pool::get:\n{}", mysql_select);
-                deserialize::perform_get(&self.pool, mysql_select, &select_structure)
-            },
-            IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),
-            //IResult::Incomplete (size) => unimplemented!()
-            IResult::Incomplete (_) => unimplemented!()
-        }
+    pub fn get (&self, query: &str) -> Future<String, ()> {
+        let (tx, future) = Future::<String, ()>::pair();
+            self.sender.send(GraphqlMsg::Request{
+                operation: "get".to_string(),
+                body: query.to_string(),
+                tx: tx
+            }).unwrap();
+        future
     }
 
 
-    pub fn add (&mut self, query: &str) /*-> Result<T,E>*/ {
+    pub fn add (&mut self, query: &str) -> Future<String, ()> {
+        let (tx, future) = Future::<String, ()>::pair();
         self.sender.send(GraphqlMsg::Request{
             operation: "add".to_string(),
-            body: query.to_string()
+            body: query.to_string(),
+            tx: tx
         }).unwrap();
+        future
     }
 
-    pub fn update (&mut self, query: &str) /*-> Result<T,E>*/ {
+    pub fn update (&mut self, query: &str) -> Future<String, ()> {
+        let (tx, future) = Future::<String, ()>::pair();
         self.sender.send(GraphqlMsg::Request{
             operation: "update".to_string(),
-            body: query.to_string()
+            body: query.to_string(),
+            tx: tx
         }).unwrap();
+        future
     }
 
-    pub fn delete (&mut self, query: &str) /*-> Result<T,E>*/ {
+    pub fn delete (&mut self, query: &str) -> Future<String, ()> {
+        let (tx, future) = Future::<String, ()>::pair();
         self.sender.send(GraphqlMsg::Request{
             operation: "delete".to_string(),
-            body: query.to_string()
+            body: query.to_string(),
+            tx: tx
         }).unwrap();
+        future
     }
 
     pub fn destroy_database (&mut self){

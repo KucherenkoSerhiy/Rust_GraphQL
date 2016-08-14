@@ -301,11 +301,21 @@ fn test_db_creation_and_CRUD () {
     }";
 
     graph_ql_pool.add(add_human_query);
-    assert_eq!(
-        graph_ql_pool.get(get_human_query),
-        "{\n  \"data\": {\n    \"name\": \"Luke\"\n    \"homePlanet\": \"Char\"\n  }\n}"
-    );
 
+    let future = graph_ql_pool.get(get_human_query);
+    future.receive(move |data| {
+        let result = match data {
+            Ok(res) => res,
+            Err(err) => {
+                panic!("Error: {:?}",err);
+                return;
+            },
+        };
+        assert_eq!(
+            result,
+            "{\n  \"data\": {\n    \"name\": \"Luke\"\n    \"homePlanet\": \"Char\"\n  }\n}"
+        );
+    });
 
     //DROIDS
     let add_droid_query =
