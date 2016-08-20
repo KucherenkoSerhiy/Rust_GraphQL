@@ -14,7 +14,7 @@ use log::LogLevel;
 
 use nom::IResult;
 use serialize;
-use deserialize;
+use deserialize::*;
 
 use def::TargetPool;
 use parser;
@@ -43,7 +43,9 @@ pub struct Connection {
 
     pub request_messages: Vec<GraphqlMsg>,
     pub response_messages: Vec<GraphqlMsg>,
-    target: TargetPool
+    target: TargetPool,
+
+    deserializer: Deserializer
 }
 
 impl Connection {
@@ -53,7 +55,8 @@ impl Connection {
             token: token,
             request_messages: Vec::new(),
             response_messages: Vec::new(),
-            target: targetPool
+            target: targetPool,
+            deserializer: Deserializer::new()
         }
     }
 
@@ -99,14 +102,14 @@ impl Connection {
         result
     }
 
-    pub fn get (&self, query: &str) -> String {
+    pub fn get (&mut self, query: &str) -> String {
         //println!("Graph_QL_Pool::get:\n{}\n---------------------------", query);
         let select_query_data = parser::parse_select_query(query.as_bytes());
         match select_query_data{
             IResult::Done(_, select_structure) => {
                 let mut mysql_select: String = serialize::perform_get((&self.target.working_database_name).to_string(), &select_structure);
                 println!("CONNECTION::GET:\n{}", mysql_select);
-                deserialize::perform_get(&self.target.pool, mysql_select, &select_structure)
+                self.deserializer.perform_get(&self.target.pool, mysql_select, &select_structure)
             },
             IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),
             //IResult::Incomplete (size) => unimplemented!()
