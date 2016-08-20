@@ -335,7 +335,6 @@ fn test_db_creation_and_CRUD () {
                 return;
             },
         };
-        println!("<HUMANSSS>\n{}</HUMANSSS>", result);
     });
 
     //DROIDS
