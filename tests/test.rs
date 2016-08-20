@@ -317,6 +317,27 @@ fn test_db_creation_and_CRUD () {
         );
     });
 
+    let get_humans_query =
+    "
+    {
+        Human {
+            name
+            homePlanet
+        }
+    }";
+
+    let future = graph_ql_pool.get(get_human_query);
+    future.receive(move |data| {
+        let result = match data {
+            Ok(res) => res,
+            Err(err) => {
+                panic!("Error: {:?}",err);
+                return;
+            },
+        };
+        println!("<HUMANSSS>\n{}</HUMANSSS>", result);
+    });
+
     //DROIDS
     let add_droid_query =
     "

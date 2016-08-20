@@ -1,3 +1,4 @@
+use std::option::Option;
 use def;
 
 pub fn create_database(db_name: String) -> String {
@@ -21,7 +22,7 @@ pub fn create_table(db_name: String, table: &def::DbTable) -> String{
     load_table_query
 }
 
-pub fn perform_get(db_name: String, select_structure : &(&str, (&str, &str), Vec<&str>)) -> String{
+pub fn perform_get(db_name: String, select_structure : &(&str, Option<(&str, &str)>, Vec<&str>)) -> String{
     let last_column = select_structure.2.last().unwrap();
     let mut mysql_select: String = "SELECT ".to_string();
     for col in &select_structure.2{
@@ -29,11 +30,12 @@ pub fn perform_get(db_name: String, select_structure : &(&str, (&str, &str), Vec
         if col != last_column {mysql_select = mysql_select + ","};
         mysql_select = mysql_select + " "
     }
-    mysql_select = mysql_select +
+    mysql_select = mysql_select + "FROM " + &(db_name) + "." + select_structure.0 + " ";
+    if let Some(parameter) = select_structure.1 {
+        mysql_select = mysql_select + "WHERE " + parameter.0 + "=" + parameter.1;
+    }
+    mysql_select = mysql_select + ";";
 
-        "FROM " + &(db_name) + "." + select_structure.0 + " " +
-
-        "WHERE " + (select_structure.1).0 + " = " + (select_structure.1).1 + ";";
     mysql_select
 }
 
@@ -57,6 +59,7 @@ pub fn perform_add_mutation(db_name: String, insert_structure : &(&str, Vec<(&st
         mysql_insert = mysql_insert + " ";
     }
     mysql_insert = mysql_insert + ");";
+
     mysql_insert
 }
 
@@ -81,5 +84,6 @@ pub fn perform_delete_mutation(db_name: String, delete_structure : &(&str, Optio
         mysql_delete = mysql_delete + "WHERE " + id.0 + "=" + id.1;
     }
     mysql_delete = mysql_delete + ";";
+
     mysql_delete
 }

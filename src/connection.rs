@@ -100,30 +100,29 @@ impl Connection {
     }
 
     pub fn get (&self, query: &str) -> String {
-        println!("Graph_QL_Pool::get:\n{}\n---------------------------", query);
+        //println!("Graph_QL_Pool::get:\n{}\n---------------------------", query);
         let select_query_data = parser::parse_select_query(query.as_bytes());
         match select_query_data{
             IResult::Done(_, select_structure) => {
                 let mut mysql_select: String = serialize::perform_get((&self.target.working_database_name).to_string(), &select_structure);
-                println!("parsed");
+                println!("CONNECTION::GET:\n{}", mysql_select);
                 deserialize::perform_get(&self.target.pool, mysql_select, &select_structure)
             },
             IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),
             //IResult::Incomplete (size) => unimplemented!()
             IResult::Incomplete (_) => unimplemented!()
         }
-
     }
 
     pub fn add (&mut self, query: &str) -> String {
-        println!("Graph_QL_Pool::add:\n{}\n---------------------------", query);
+        //println!("Graph_QL_Pool::add:\n{}\n---------------------------", query);
         let insert_query_data = parser::parse_insert_query(query.as_bytes());
         match insert_query_data{
             //IResult::Done(input, insert_structure) => {
             IResult::Done(_, insert_structure) => {
 
                 let mut mysql_insert: String = serialize::perform_add_mutation((&self.target.working_database_name).to_string(), &insert_structure);
-                println!("parsed");
+                //println!("CONNECTION::ADD:\n{}", mysql_insert);
                 let mut conn = self.target.pool.get_conn().unwrap();
                 conn.query(&mysql_insert).unwrap();
             },
@@ -136,14 +135,14 @@ impl Connection {
     }
 
     pub fn update (&mut self, query: &str) -> String {
-        println!("Graph_QL_Pool::update:\n{}\n---------------------------", query);
+        //println!("Graph_QL_Pool::update:\n{}\n---------------------------", query);
         let update_query_data = parser::parse_update_query(query.as_bytes());
         match update_query_data{
             //IResult::Done(input, update_structure) => {
             IResult::Done(_, update_structure) => {
                 let mut mysql_update: String = serialize::perform_update_mutation((&self.target.working_database_name).to_string(), &update_structure);
 
-                println!("parsed");
+                //println!("parsed");
                 let mut conn = self.target.pool.get_conn().unwrap();
                 conn.query(&mysql_update).unwrap();
             },
@@ -156,13 +155,13 @@ impl Connection {
     }
 
     pub fn delete (&mut self, query: &str) -> String {
-        println!("Graph_QL_Pool::delete:\n{}\n---------------------------", query);
+        //println!("Graph_QL_Pool::delete:\n{}\n---------------------------", query);
         let delete_query_data = parser::parse_delete_query(query.as_bytes());
         match delete_query_data{
             //IResult::Done(input, delete_structure) => {
             IResult::Done(_, delete_structure) => {
                 let mut mysql_delete: String = serialize::perform_delete_mutation((&self.target.working_database_name).to_string(), &delete_structure);
-                println!("parsed");
+                //println!("parsed");
                 let mut conn = self.target.pool.get_conn().unwrap();
                 conn.query(&mysql_delete).unwrap();
             },

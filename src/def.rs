@@ -38,10 +38,7 @@ pub struct TargetPool {
 
 #[derive(Clone)]
 pub struct GraphQLPool {
-    pub pool: mysql::Pool,
     pub sender: Sender<GraphqlMsg>,
-    pub database: Vec<DbTable>,
-    pub working_database_name: String
 }
 
 impl GraphQLPool {
@@ -66,9 +63,6 @@ impl GraphQLPool {
 
         GraphQLPool{
             sender: ConnectionPool::new(targetPool.clone()),
-            pool: pool,
-            database: db,
-            working_database_name: db_name.to_string(),
         }
     }
 
@@ -114,8 +108,8 @@ impl GraphQLPool {
     }
 
     pub fn destroy_database (&mut self){
-        let mut conn = self.pool.get_conn().unwrap();
-        conn.query(serialize::destroy_database((&self.working_database_name).to_string())).unwrap();
+        //let mut conn = self.pool.get_conn().unwrap();
+        //conn.query(serialize::destroy_database((&self.working_database_name).to_string())).unwrap();
     }
 }
 

@@ -131,16 +131,16 @@ impl Handler for ConnectionPool {
                 let mut connection = self.connections.get_mut(token).unwrap();
                 //we're getting response
                 if events.is_readable() {
-                    println!("ConnectionPool::ready: ready to read from client");
+                    //println!("ConnectionPool::ready: ready to read from client");
                     self.response_messages.append(&mut connection.get_responses());
                     event_loop.reregister(&connection.socket, connection.token, EventSet::writable(),
                                           PollOpt::edge() | PollOpt::oneshot()).unwrap();
                 }
                 if events.is_writable(){
-                    println!("ConnectionPool::ready: ready to write to client");
+                    //println!("ConnectionPool::ready: ready to write to client");
                     if !self.request_messages.is_empty(){
                         //write request to the client and reregister it to readable.
-                        println!("ConnectionPool::ready: have a message");
+                        //println!("ConnectionPool::ready: have a message");
                         connection.pushRequest(self.request_messages.remove(0));
                         connection.process();
                         event_loop.reregister(&connection.socket, connection.token, EventSet::readable(),

@@ -109,7 +109,7 @@ named!(parse_mutation_type <&[u8], Option<&[u8]> >,
     )
 );
 */
-named! (pub parse_select_query <&[u8], (&str, (&str, &str), Vec<&str>)>,
+named! (pub parse_select_query <&[u8], (&str, Option<(&str, &str)>, Vec<&str>)>,
     chain!(
         multispace?                              ~
         res: delimited!(
@@ -125,7 +125,7 @@ named! (pub parse_select_query <&[u8], (&str, (&str, &str), Vec<&str>)>,
                     char!('('),
                     parse_param,
                     char!(')')
-                )                                ~
+                )?                               ~
                 space?                           ~
                 table_cols: delimited!(
                     char!('{'),
@@ -315,7 +315,7 @@ fn test_get_parser_function(){
             name
         }
     }"[..];
-    let get_query_data = IResult::Done(&b""[..], {("user", ("id", "1"), vec![{"name"}])});
+    let get_query_data = IResult::Done(&b""[..], {("user", Some({("id", "1")}), vec![{"name"}])});
     assert_eq!(parse_select_query(get_query), get_query_data);
 }
 
