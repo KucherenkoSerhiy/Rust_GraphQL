@@ -350,7 +350,7 @@ fn test_db_creation_and_CRUD () {
         }
     }
     ";
-    /*
+
     let get_droid_query =
     "{
         Droid (id:\"1\"){
@@ -360,16 +360,6 @@ fn test_db_creation_and_CRUD () {
             created
         }
     }";
-    */
-    let get_droid_query =
-    "
-    {
-        Droid (id:\"1\"){
-            name
-            primaryFunction
-        }
-    }
-    ";
     let update_droid_query =
     "
     {

@@ -108,7 +108,7 @@ impl Connection {
         match select_query_data{
             IResult::Done(_, select_structure) => {
                 let mut mysql_select: String = serialize::perform_get((&self.target.working_database_name).to_string(), &select_structure);
-                println!("CONNECTION::GET:\n{}", mysql_select);
+                //println!("CONNECTION::GET:\n{}", mysql_select);
                 self.deserializer.perform_get(&self.target.pool, mysql_select, &select_structure)
             },
             IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),

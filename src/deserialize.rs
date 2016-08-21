@@ -41,7 +41,9 @@ impl Deserializer {
         json = json + &(self.get_tabulation()) + "\"data\": {" + &(self.endline());
         self.add_tabbing();
 
-        for result in pool.prep_exec(query, ()).unwrap() {
+        let mut queryResult = pool.prep_exec(query, ()).unwrap();
+
+        for result in queryResult.by_ref() {
             let mut row = result.unwrap();
             let mut resulting_object : String = "".to_string();
 
@@ -49,15 +51,16 @@ impl Deserializer {
             self.add_tabbing();
 
             for col in &select_structure.2{
-                //let data : ColumnType = row.take(*col).unwrap();
-                let data : String = row.take(*col).unwrap();
+                let data : mysql::Value = row.take(*col).unwrap();
+                //let data : String = row.take(*col).unwrap();
                 match data {
-                    _ => resulting_object = resulting_object + &(self.get_tabulation()) + "\"" + col + "\": \"" + &data + "\"" + &(self.endline())
+                    ref Bytes => resulting_object = resulting_object + &(self.get_tabulation()) + "\"" + col + "\": " + &(data.into_str()) + if *col != *(select_structure.2.last().unwrap()) {","} else {""} + &(self.endline())
+                    //_ => unimplemented!()
                 };
             }
 
             self.remove_tabbing();
-            resulting_object = resulting_object + &(self.get_tabulation()) + "}"+ &(self.endline());
+            resulting_object = resulting_object + &(self.get_tabulation()) + "}" + if row == row {","} else {""} + &(self.endline());
             //let name: String = row.take("name").unwrap();
             json = json + resulting_object.as_str();
         };
