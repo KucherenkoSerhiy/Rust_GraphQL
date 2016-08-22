@@ -15,7 +15,7 @@ extern crate log;
 extern crate env_logger;
 
 
-use rust_sql::def::*;
+use rust_sql::graphql_pool::*;
 use rust_sql::parser::*;
 
 //use mio::{Token, EventLoop};

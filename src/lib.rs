@@ -21,3 +21,4 @@ pub mod def;
 pub mod parser;
 pub mod connection;
 pub mod connection_pool;
+pub mod graphql_pool;
