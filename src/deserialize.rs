@@ -32,7 +32,10 @@ impl Deserializer {
         if self.tabs > 0 {self.tabs = self.tabs-1};
     }
 
-    pub fn perform_get(&mut self, pool: &mysql::Pool, query: String, select_structure : &(&str, Option<(&str, &str)>, Vec<&str>) ) -> String {
+//  pub fn perform_get(&mut self, pool: &mysql::Pool, query: String, select_structure : &(&str, Option<(&str, &str)>, Vec<&str>) ) -> String {
+
+
+    pub fn perform_get(&mut self, pool: &mysql::Pool, query: String, select_structure : &(String, Option<(String, String)>, Vec<String>) ) -> String {
         let mut json = "".to_string();
 
         json = json + &(self.get_tabulation()) + "{" + &(self.endline());
@@ -47,14 +50,14 @@ impl Deserializer {
             let mut row = result.unwrap();
             let mut resulting_object : String = "".to_string();
 
-            resulting_object = resulting_object + &(self.get_tabulation()) + "\"" + select_structure.0 + "\": {" + &(self.endline());
+            resulting_object = resulting_object + &(self.get_tabulation()) + "\"" + select_structure.0.as_str() + "\": {" + &(self.endline());
             self.add_tabbing();
 
             for col in &select_structure.2{
-                let data : mysql::Value = row.take(*col).unwrap();
+                let data : mysql::Value = row.take(col.as_str()).unwrap();
                 //let data : String = row.take(*col).unwrap();
                 match data {
-                    ref Bytes => resulting_object = resulting_object + &(self.get_tabulation()) + "\"" + col + "\": " + &(data.into_str()) + if *col != *(select_structure.2.last().unwrap()) {","} else {""} + &(self.endline())
+                    ref Bytes => resulting_object = resulting_object + &(self.get_tabulation()) + "\"" + &col + "\": " + &(data.into_str()) + if *col != *(select_structure.2.last().unwrap()) {","} else {""} + &(self.endline())
                     //_ => unimplemented!()
                 };
             }

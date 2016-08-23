@@ -21,3 +21,20 @@ pub struct TargetPool {
     pub database: Vec<DbTable>,
     pub working_database_name: String
 }
+
+pub struct Object_Query {
+    name: String,
+    params: Option<(String, String)>,
+    attrs: Option<Vec <Object_Query> >
+}
+
+pub enum GraphQL_Datatype {
+    Number,
+    String,
+    Boolean,
+    Array,
+    Value,
+    Object,
+    Whitespace,
+    null
+}

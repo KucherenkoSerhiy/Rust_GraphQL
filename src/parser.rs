@@ -8,7 +8,7 @@ use std::option::Option;
 
 use def::*;
 
-named!(parse_param <&[u8],(&str,&str)>,
+named!(parse_param <&[u8],(String,String)>,
   chain!(
     key: map_res!(alphanumeric, str::from_utf8) ~
          space?                            ~
@@ -20,11 +20,11 @@ named!(parse_param <&[u8],(&str,&str)>,
          )                                 ~
          space?                            ~
          multispace?                       ,
-    ||{(key, val)}
+    ||{(key.to_string(), val.to_string())}
   )
 );
 
-named!(parse_field <&[u8],(&str,&str)>,
+named!(parse_field <&[u8],(String,String)>,
   chain!(
     key: map_res!(alphanumeric, str::from_utf8) ~
          space?                            ~
@@ -36,11 +36,11 @@ named!(parse_field <&[u8],(&str,&str)>,
          )                                 ~
          space?                            ~
          multispace?                       ,
-    ||{(key, val)}
+    ||{(key.to_string(), val.to_string())}
   )
 );
 
-named!(parse_object_attributes <&[u8], Vec<(&str,&str)> >,
+named!(parse_object_attributes <&[u8], Vec<(String,String)> >,
     delimited!(
         char!('{'),
         many0!(chain!(
@@ -52,18 +52,18 @@ named!(parse_object_attributes <&[u8], Vec<(&str,&str)> >,
     )
 );
 
-named!(parse_object <(&str, Vec<(&str, &str)>)>,
+named!(parse_object <(String, Vec<(String, String)>)>,
     chain!(
         tag!("type")                         ~
         space                                ~
         name: map_res!(alphanumeric, str::from_utf8) ~
         multispace?                          ~
         attrs: parse_object_attributes,
-        || {(name, attrs)}
+        || {(name.to_string(), attrs)}
     )
 );
 
-named! (pub parse_all_objects <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
+named! (pub parse_all_objects <&[u8], Vec <(String, Vec<(String, String)>)> >,
     many0!(chain!(
         multispace?                          ~
         result: parse_object                 ~
@@ -74,7 +74,7 @@ named! (pub parse_all_objects <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
 
 /*
 WILL BE USED TO PARSE EVERYTHING (Tables, Relations, Enums) IN THE FILE
-named! (pub parse_file <&[u8], Vec <(&str, Vec<(&str, &str)>)> >,
+named! (pub parse_file <&[u8], Vec <(String, Vec<(String, String)>)> >,
     chain!(
         tbl: parse_all_objects,
         ||{tbl}
@@ -109,40 +109,66 @@ named!(parse_mutation_type <&[u8], Option<&[u8]> >,
     )
 );
 */
-named! (pub parse_select_query <&[u8], (&str, Option<(&str, &str)>, Vec<&str>)>,
+
+
+/*
+{
+        user (id:1) {
+            name
+            friends {
+              id
+              name
+            }
+        }
+    }
+*/
+
+/*
+map_res
+expected `std::string::String`,
+found `std::result::Result<_, _>`
+
+map
+expected `String`,
+found `std::result::Result<String, std::str::Utf8Error>`
+*/
+named! (parse_select_object <&[u8], (String, Option<(String, String)>, Vec<String>)>,
+    chain!(
+        multispace?                      ~
+        object: map_res!(
+                    alphanumeric,
+                    str::from_utf8
+                )                        ~
+        space?                           ~
+        params: delimited!(
+            char!('('),
+            parse_param,
+            char!(')')
+        )?                               ~
+        space?                           ~
+        attributes: delimited!(
+            char!('{'),
+            many0!(chain!(
+                multispace?              ~
+                attr: map_res!(alphanumeric, str::from_utf8)   ~
+                    //parse_select_object //recursivitat
+
+                multispace?,
+                ||{attr.to_string()}
+            )),
+            char!('}')
+        )                                ~
+        multispace?,
+        ||{(object.to_string(), params, attributes)}
+    )
+);
+
+named! (pub parse_select_query <&[u8], (String, Option<(String, String)>, Vec<String>)>,
     chain!(
         multispace?                              ~
         res: delimited!(
             char!('{'),
-            chain!(
-                multispace?                      ~
-                table_name: map_res!(
-                            alphanumeric,
-                            str::from_utf8
-                        )                        ~
-                space?                           ~
-                table_params: delimited!(
-                    char!('('),
-                    parse_param,
-                    char!(')')
-                )?                               ~
-                space?                           ~
-                table_cols: delimited!(
-                    char!('{'),
-                    many0!(chain!(
-                        multispace?              ~
-                        result: map_res!(
-                            alphanumeric,
-                            str::from_utf8
-                        )                        ~
-                        multispace?,
-                        ||{result}
-                    )),
-                    char!('}')
-                )                                ~
-                multispace?,
-                ||{(table_name, table_params, table_cols)}
-            ),
+            parse_select_object,
             char!('}')
         )                                        ~
         multispace?,
@@ -151,57 +177,19 @@ named! (pub parse_select_query <&[u8], (&str, Option<(&str, &str)>, Vec<&str>)>,
 );
 
 
-named! (pub parse_insert_query <&[u8], (&str, Vec<(&str, &str)> )>,
+named! (pub parse_insert_query <&[u8], (String, Vec<(String, String)> )>,
     chain!(
         multispace?                              ~
         res: delimited!(
             char!('{'),
             chain!(
                 multispace?                      ~
-                table_name: map_res!(
+                object: map_res!(
                             alphanumeric,
                             str::from_utf8
                         )                        ~
                 multispace?                      ~
-                table_cols: delimited!(
-                    char!('{'),
-                    many0!(chain!(
-                        multispace?              ~
-                        res: parse_field         ~
-                        multispace?,
-                        ||{res}
-                    )),
-                    char!('}')
-                )                                ~
-                multispace?,
-                ||{(table_name, table_cols)}
-            ),
-            char!('}')
-        )                                        ~
-        multispace?,
-        ||{res}
-    )
-);
-
-named! (pub parse_update_query <&[u8], (&str, (&str, &str), Vec<(&str, &str)> )>,
-    chain!(
-        multispace?                              ~
-        res: delimited!(
-            char!('{'),
-            chain!(
-                multispace?                      ~
-                table_name: map_res!(
-                            alphanumeric,
-                            str::from_utf8
-                        )                        ~
-                space?                           ~
-                table_params: delimited!(
-                    char!('('),
-                    parse_param,
-                    char!(')')
-                )                                ~
-                space?                           ~
-                table_mutations: delimited!(
+                attributes: delimited!(
                     char!('{'),
                     many0!(chain!(
                         multispace?              ~
@@ -212,7 +200,45 @@ named! (pub parse_update_query <&[u8], (&str, (&str, &str), Vec<(&str, &str)> )>
                     char!('}')
                 )                                ~
                 multispace?,
-                ||{(table_name, table_params, table_mutations)}
+                ||{(object.to_string(), attributes)}
+            ),
+            char!('}')
+        )                                        ~
+        multispace?,
+        ||{res}
+    )
+);
+
+named! (pub parse_update_query <&[u8], (String, (String, String), Vec<(String, String)> )>,
+    chain!(
+        multispace?                              ~
+        res: delimited!(
+            char!('{'),
+            chain!(
+                multispace?                      ~
+                object: map_res!(
+                            alphanumeric,
+                            str::from_utf8
+                        )                        ~
+                space?                           ~
+                params: delimited!(
+                    char!('('),
+                    parse_param,
+                    char!(')')
+                )                                ~
+                space?                           ~
+                mutations: delimited!(
+                    char!('{'),
+                    many0!(chain!(
+                        multispace?              ~
+                        res: parse_field         ~
+                        multispace?,
+                        ||{res}
+                    )),
+                    char!('}')
+                )                                ~
+                multispace?,
+                ||{(object.to_string(), params, mutations)}
             ),
             char!('}')
         )                                        ~
@@ -222,19 +248,19 @@ named! (pub parse_update_query <&[u8], (&str, (&str, &str), Vec<(&str, &str)> )>
 );
 
 
-named! (pub parse_delete_query <&[u8], (&str, Option<(&str, &str)> )>,
+named! (pub parse_delete_query <&[u8], (String, Option<(String, String)> )>,
     chain!(
         multispace?                              ~
         res: delimited!(
             char!('{'),
             chain!(
                 multispace?                      ~
-                table_name: map_res!(
+                object: map_res!(
                             alphanumeric,
                             str::from_utf8
                         )                        ~
                 multispace?                      ~
-                table_cols: delimited!(
+                attributes: delimited!(
                     char!('('),
                     chain!(
                         multispace?              ~
@@ -245,7 +271,7 @@ named! (pub parse_delete_query <&[u8], (&str, Option<(&str, &str)> )>,
                     char!(')')
                 )?                               ~
                 multispace?,
-                ||{(table_name, table_cols)}
+                ||{(object.to_string(), attributes)}
             ),
             char!('}')
         )                                        ~
@@ -261,7 +287,7 @@ fn test_internal_parser_functions(){
         parse_field(&b"id : String
                     "[..]),
         //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
-        IResult::Done(&b""[..], {("id", "String")})
+        IResult::Done(&b""[..], {("id".to_string(), "String".to_string())})
     );
 
 
@@ -269,14 +295,14 @@ fn test_internal_parser_functions(){
         parse_field(&b"id:'1'
                     "[..]),
         //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
-        IResult::Done(&b""[..], {("id", "\'1\'")})
+        IResult::Done(&b""[..], {("id".to_string(), "\'1\'".to_string())})
     );
 
     let cols = IResult::Done(&b""[..], vec![
-        {("id", "String")},
-        {("name", "String")},
-        {("homePlanet", "String")},
-        {("list", "[String]")}
+        {("id".to_string(), "String".to_string())},
+        {("name".to_string(), "String".to_string())},
+        {("homePlanet".to_string(), "String".to_string())},
+        {("list".to_string(), "[String]".to_string())}
     ]);
     assert_eq!(
         parse_object_attributes(&b"{
@@ -288,22 +314,24 @@ fn test_internal_parser_functions(){
         cols
     );
 
-    let result_table = IResult::Done(
+    let result = IResult::Done(
         &b""[..],
-        (&"Human"[..],
+        ("Human".to_string(),
          vec![
-            {("id", "String")},
-            {("name", "String")},
-            {("homePlanet", "String")}
+            {("id".to_string(), "String".to_string())},
+            {("name".to_string(), "String".to_string())},
+            {("homePlanet".to_string(), "String".to_string())}
         ])
     );
     assert_eq!(
-        parse_object(&b"type Human{
+        parse_object(
+                &b"type Human{
                     id: String
                     name: String
                     homePlanet: String
-                 }"[..]),
-        result_table
+                }"[..]
+        ),
+        result
     );
 }
 
@@ -315,8 +343,19 @@ fn test_get_parser_function(){
             name
         }
     }"[..];
-    let get_query_data = IResult::Done(&b""[..], {("user", Some({("id", "1")}), vec![{"name"}])});
+    let get_query_data = IResult::Done(&b""[..], {("user".to_string(), Some({("id".to_string(), "1".to_string())}), vec![{"name".to_string()}])});
     assert_eq!(parse_select_query(get_query), get_query_data);
+
+    let get_query =
+    &b"{
+        user (id:1) {
+            name
+            friends {
+              id
+              name
+            }
+        }
+    }"[..];
 }
 
 #[test]
@@ -329,7 +368,7 @@ fn test_insert_parser_function(){
             homePlanet: Char
         }
     }"[..];
-    let mut insert_query_data = IResult::Done(&b""[..], {("Human", vec![{("id", "1")}, {("name", "Luke")}, {("homePlanet", "Char")}])});
+    let mut insert_query_data = IResult::Done(&b""[..], {("Human".to_string(), vec![{("id".to_string(), "1".to_string())}, {("name".to_string(), "Luke".to_string())}, {("homePlanet".to_string(), "Char".to_string())}])});
     assert_eq!(parse_insert_query(insert_query), insert_query_data);
 
     insert_query =
@@ -342,7 +381,7 @@ fn test_insert_parser_function(){
             created: STR_TO_DATE('1-01-2012', '%d-%m-%Y')
         }
     }"[..];
-    insert_query_data = IResult::Done(&b""[..], {("Droid", vec![{("id", "1")}, {("name", "R2D2")}, {("age", "3")}, {("primaryFunction", "Mechanic")}, {("created", "STR_TO_DATE('1-01-2012', '%d-%m-%Y')")}])});
+    insert_query_data = IResult::Done(&b""[..], {("Droid".to_string(), vec![{("id".to_string(), "1".to_string())}, {("name".to_string(), "R2D2".to_string())}, {("age".to_string(), "3".to_string())}, {("primaryFunction".to_string(), "Mechanic".to_string())}, {("created".to_string(), "STR_TO_DATE('1-01-2012', '%d-%m-%Y')".to_string())}])});
     assert_eq!(parse_insert_query(insert_query), insert_query_data);
 }
 
@@ -354,7 +393,7 @@ fn test_update_parser_function(){
             age: 4
         }
     }"[..];
-    let update_query_data = IResult::Done(&b""[..], {("Droid", ("id", "1"), vec![{("age", "4")}])});
+    let update_query_data = IResult::Done(&b""[..], {("Droid".to_string(), ("id".to_string(), "1".to_string()), vec![{("age".to_string(), "4".to_string())}])});
     assert_eq!(parse_update_query(update_query), update_query_data);
 }
 
@@ -364,13 +403,13 @@ fn test_delete_parser_function(){
     &b"{
         user (id:1)
     }"[..];
-    let mut delete_query_data = IResult::Done(&b""[..], {("user", Some(("id", "1")))});
+    let mut delete_query_data = IResult::Done(&b""[..], {("user".to_string(), Some(("id".to_string(), "1".to_string())))});
     assert_eq!(parse_delete_query(delete_query), delete_query_data);
 
     delete_query =
     &b"{
         user
     }"[..];
-    delete_query_data = IResult::Done(&b""[..], {("user", None)});
+    delete_query_data = IResult::Done(&b""[..], {("user".to_string(), None)});
     assert_eq!(parse_delete_query(delete_query), delete_query_data);
 }
