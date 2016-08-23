@@ -22,10 +22,12 @@ pub struct TargetPool {
     pub working_database_name: String
 }
 
-pub struct Object_Query {
-    name: String,
-    params: Option<(String, String)>,
-    attrs: Option<Vec <Object_Query> >
+#[derive(Debug, PartialEq, Eq)]
+pub struct Query_Object {
+    pub name: String,
+    pub params: Option<(String, String)>,
+    //pub attrs: Option<Vec <Query_Object> >
+    pub attrs: Option<Vec <String> >
 }
 
 pub enum GraphQL_Datatype {

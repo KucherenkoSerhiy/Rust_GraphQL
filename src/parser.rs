@@ -132,7 +132,8 @@ map
 expected `String`,
 found `std::result::Result<String, std::str::Utf8Error>`
 */
-named! (parse_select_object <&[u8], (String, Option<(String, String)>, Vec<String>)>,
+//named! (parse_select_object <&[u8], (String, Option<(String, String)>, Vec<String>)>,
+named! (parse_select_object <&[u8], Query_Object>,
     chain!(
         multispace?                      ~
         object: map_res!(
@@ -159,11 +160,11 @@ named! (parse_select_object <&[u8], (String, Option<(String, String)>, Vec<Strin
             char!('}')
         )                                ~
         multispace?,
-        ||{(object.to_string(), params, attributes)}
+        ||{Query_Object{name: object.to_string(), params: params, attrs: Some(attributes)}}
     )
 );
 
-named! (pub parse_select_query <&[u8], (String, Option<(String, String)>, Vec<String>)>,
+named! (pub parse_select_query <&[u8], Query_Object>,
     chain!(
         multispace?                              ~
         res: delimited!(
@@ -343,7 +344,13 @@ fn test_get_parser_function(){
             name
         }
     }"[..];
-    let get_query_data = IResult::Done(&b""[..], {("user".to_string(), Some({("id".to_string(), "1".to_string())}), vec![{"name".to_string()}])});
+    let get_query_data = IResult::Done(&b""[..],
+        {Query_Object {
+            name:"user".to_string(),
+            params: Some({("id".to_string(), "1".to_string())}),
+            attrs: Some(vec![{"name".to_string()}])
+        }}
+    );
     assert_eq!(parse_select_query(get_query), get_query_data);
 
     let get_query =

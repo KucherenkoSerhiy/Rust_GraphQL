@@ -22,16 +22,16 @@ pub fn create_table(db_name: String, table: &def::DbTable) -> String{
     load_table_query
 }
 
-pub fn perform_get(db_name: String, select_structure : &(String, Option<(String, String)>, Vec<String>)) -> String{
-    let last_column = select_structure.2.last().unwrap();
+pub fn perform_get(db_name: String, select_structure : &def::Query_Object) -> String{
+    let last_column = select_structure.attrs.as_ref().unwrap().last().unwrap();
     let mut mysql_select: String = "SELECT ".to_string();
-    for col in &select_structure.2{
+    for col in select_structure.attrs.as_ref().unwrap(){
         mysql_select = mysql_select + col;
         if col != last_column {mysql_select = mysql_select + ","};
         mysql_select = mysql_select + " "
     }
-    mysql_select = mysql_select + "FROM " + &(db_name) + "." + &select_structure.0 + " ";
-    if let &Some(parameter) = &select_structure.1.as_ref() {
+    mysql_select = mysql_select + "FROM " + &(db_name) + "." + &select_structure.name + " ";
+    if let &Some(parameter) = &select_structure.params.as_ref() {
         mysql_select = mysql_select + "WHERE " + &parameter.0 + "=" + &parameter.1;
     }
     mysql_select = mysql_select + ";";
