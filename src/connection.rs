@@ -84,12 +84,12 @@ impl Connection {
                         "delete" => {
                             self.delete(&body)
                         },
-                        _ => panic!("Wrong operation type")
+                        _ => panic!("Error: Wrong operation type")
                     };
                     self.response_messages.push(GraphqlMsg::Response{body: response_body.clone()});
                     tx.complete(response_body);
                 },
-                _ => panic!("Type of message not expected")
+                _ => panic!("Error: Unexpected type of message")
             }
         }
     }

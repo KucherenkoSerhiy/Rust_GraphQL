@@ -32,9 +32,15 @@ impl GraphQLPool {
 
         conn.query(serialize::create_database(db_name.to_string())).unwrap();
         conn.query(serialize::use_database(db_name.to_string())).unwrap();
+
+        let mut relations : Vec<Relation> = Vec::new();
         for table in & db {
-            conn.query((&(serialize::create_table(db_name.to_string(), &table))).to_string()).unwrap();
+            let (query, mut rels) = serialize::create_table(db_name.to_string(), &table);
+            relations.append(&mut rels);
+            conn.query(query).unwrap();
         }
+
+        //add relation tables according the relations in the vector
 
         let mut targetPool = TargetPool{
             pool: pool.clone(),

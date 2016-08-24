@@ -296,6 +296,12 @@ fn test_internal_parser_functions(){
         IResult::Done(&b""[..], {("id".to_string(), "\'1\'".to_string())})
     );
 
+    assert_eq!(
+        parse_field(&b"id:[Object]
+                    "[..]),
+        IResult::Done(&b""[..], {("id".to_string(), "[Object]".to_string())})
+    );
+
     let cols = IResult::Done(&b""[..], vec![
         {("id".to_string(), "String".to_string())},
         {("name".to_string(), "String".to_string())},

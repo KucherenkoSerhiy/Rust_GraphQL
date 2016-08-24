@@ -30,6 +30,11 @@ pub struct Query_Object {
     //pub attrs: Option<Vec <String> >
 }
 
+pub struct Relation {
+    pub owner: String,
+    pub target: String
+}
+
 pub enum GraphQL_Datatype {
     Number,
     String,

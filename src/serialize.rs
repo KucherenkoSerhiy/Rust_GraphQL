@@ -1,4 +1,6 @@
 use std::option::Option;
+use std::vec::Vec;
+use std::error::Error;
 use def;
 
 pub fn create_database(db_name: String) -> String {
@@ -13,13 +15,33 @@ pub fn destroy_database(db_name: String) -> String {
     "DROP DATABASE IF EXISTS ".to_string() + &db_name
 }
 
-pub fn create_table(db_name: String, table: &def::DbTable) -> String{
+pub fn create_table(db_name: String, table: &def::DbTable) -> (String, Vec<def::Relation>){
+    let mut rels : Vec<def::Relation> = Vec::new();
+
     let mut load_table_query: String = "".to_string();
     load_table_query = load_table_query + "CREATE TABLE IF NOT EXISTS " + &db_name + "." + &table.name; load_table_query = load_table_query + "(
-        " + &table.name + "_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT"; for column in &table.columns {load_table_query = load_table_query + ",
-        "+ &column.name + " "+ &column.db_type}; load_table_query = load_table_query +"
+        " + &table.name + "_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT";
+    for column in &table.columns {
+        if column.db_type.starts_with("["){
+            if column.db_type.ends_with("]"){
+                let mut owner = column.db_type.clone();
+                owner.remove(0);
+                owner.pop();
+                rels.push(def::Relation{owner: table.name.clone(), target: owner});
+            }
+            else {
+                panic!("Error: Unexpected column type")
+            }
+        }
+        else {
+            load_table_query = load_table_query + ",
+            "+ &column.name + " "+ &column.db_type
+        }
+
+    };
+    load_table_query = load_table_query +"
     );\n";
-    load_table_query
+    (load_table_query, rels)
 }
 
 pub fn perform_get(db_name: String, select_structure : &def::Query_Object) -> String{

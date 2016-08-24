@@ -27,7 +27,7 @@ fn graphql_to_mysql_type (attr_type: String) -> String {
         _ => attr_type
         /*
         "Number" => "INT",
-        "String" => "VARCHAR(255)",
+        "String" => "TEXT(2048)",
         "Boolean" => "BOOLEAN",
         "Array" => "text",
         "Value" => ,

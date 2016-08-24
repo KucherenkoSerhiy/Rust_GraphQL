@@ -11,3 +11,9 @@ type Droid {
   primaryFunction: varchar(20)
   created: date
 }
+
+type Controller {
+  id: int
+  name: text(2048)
+  controls: [Droid]
+}
