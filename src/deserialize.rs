@@ -52,10 +52,10 @@ impl Deserializer {
             self.add_tabbing();
 
             for col in select_structure.attrs.as_ref().unwrap(){
-                let data : mysql::Value = row.take(col.as_str()).unwrap();
+                let data : mysql::Value = row.take(col.name.as_str()).unwrap();
                 //let data : String = row.take(*col).unwrap();
                 match data {
-                    ref Bytes => resulting_object = resulting_object + &(self.get_tabulation()) + "\"" + &col + "\": " + &(data.into_str()) + if col != select_structure.attrs.as_ref().unwrap().last().unwrap() {","} else {""} + &(self.endline())
+                    ref Bytes => resulting_object = resulting_object + &(self.get_tabulation()) + "\"" + &col.name + "\": " + &(data.into_str()) + if col != select_structure.attrs.as_ref().unwrap().last().unwrap() {","} else {""} + &(self.endline())
                     //_ => unimplemented!()
                 };
             }

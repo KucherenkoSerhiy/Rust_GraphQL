@@ -26,7 +26,7 @@ pub fn perform_get(db_name: String, select_structure : &def::Query_Object) -> St
     let last_column = select_structure.attrs.as_ref().unwrap().last().unwrap();
     let mut mysql_select: String = "SELECT ".to_string();
     for col in select_structure.attrs.as_ref().unwrap(){
-        mysql_select = mysql_select + col;
+        mysql_select = mysql_select + col.name.as_str();
         if col != last_column {mysql_select = mysql_select + ","};
         mysql_select = mysql_select + " "
     }

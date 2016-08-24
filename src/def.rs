@@ -26,8 +26,8 @@ pub struct TargetPool {
 pub struct Query_Object {
     pub name: String,
     pub params: Option<(String, String)>,
-    //pub attrs: Option<Vec <Query_Object> >
-    pub attrs: Option<Vec <String> >
+    pub attrs: Option<Vec <Query_Object> >
+    //pub attrs: Option<Vec <String> >
 }
 
 pub enum GraphQL_Datatype {

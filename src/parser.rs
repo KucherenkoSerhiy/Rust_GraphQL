@@ -151,16 +151,15 @@ named! (parse_select_object <&[u8], Query_Object>,
             char!('{'),
             many0!(chain!(
                 multispace?              ~
-                attr: map_res!(alphanumeric, str::from_utf8)   ~
-                    //parse_select_object //recursivitat
+                  attr: parse_select_object ~ //recursivitat
 
                 multispace?,
-                ||{attr.to_string()}
+                ||{attr}
             )),
             char!('}')
-        )                                ~
+        )?                                ~
         multispace?,
-        ||{Query_Object{name: object.to_string(), params: params, attrs: Some(attributes)}}
+        ||{Query_Object{name: object.to_string(), params: params, attrs: attributes}}
     )
 );
 
@@ -287,7 +286,6 @@ fn test_internal_parser_functions(){
     assert_eq!(
         parse_field(&b"id : String
                     "[..]),
-        //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
         IResult::Done(&b""[..], {("id".to_string(), "String".to_string())})
     );
 
@@ -295,7 +293,6 @@ fn test_internal_parser_functions(){
     assert_eq!(
         parse_field(&b"id:'1'
                     "[..]),
-        //`nom::IResult<&[u8], rust_sql::def::db_column<'_>>`
         IResult::Done(&b""[..], {("id".to_string(), "\'1\'".to_string())})
     );
 
@@ -348,9 +345,10 @@ fn test_get_parser_function(){
         {Query_Object {
             name:"user".to_string(),
             params: Some({("id".to_string(), "1".to_string())}),
-            attrs: Some(vec![{"name".to_string()}])
+            attrs: Some(vec![Query_Object { name: "name".to_string(), params: None, attrs: None }])
         }}
     );
+
     assert_eq!(parse_select_query(get_query), get_query_data);
 
     let get_query =
@@ -363,6 +361,37 @@ fn test_get_parser_function(){
             }
         }
     }"[..];
+
+    let get_query_data = IResult::Done(&b""[..],
+                                       {Query_Object {
+                                           name:"user".to_string(),
+                                           params: Some({("id".to_string(), "1".to_string())}),
+                                           attrs: Some(vec![
+                                               Query_Object {
+                                                    name: "name".to_string(),
+                                                    params: None,
+                                                    attrs: None
+                                               },
+                                               Query_Object {
+                                                    name: "friends".to_string(),
+                                                    params: None,
+                                                    attrs: Some(vec![
+                                                        Query_Object {
+                                                            name: "id".to_string(),
+                                                            params: None,
+                                                            attrs: None
+                                                        },
+                                                        Query_Object {
+                                                            name: "name".to_string(),
+                                                            params: None,
+                                                            attrs: None
+                                                        }
+                                                    ])
+                                                }
+                                            ])
+                                       }}
+    );
+    assert_eq!(parse_select_query(get_query), get_query_data);
 }
 
 #[test]
