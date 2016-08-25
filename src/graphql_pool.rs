@@ -29,18 +29,23 @@ impl GraphQLPool {
 
         let pool = mysql::Pool::new(db_conn).unwrap();
         let mut conn = pool.get_conn().unwrap();
+        let mut serializer = serialize::Serializer::new();
 
-        conn.query(serialize::create_database(db_name.to_string())).unwrap();
-        conn.query(serialize::use_database(db_name.to_string())).unwrap();
+        conn.query(serializer.create_database(db_name.to_string())).unwrap();
+        conn.query(serializer.use_database(db_name.to_string())).unwrap();
 
         let mut relations : Vec<Relation> = Vec::new();
         for table in & db {
-            let (query, mut rels) = serialize::create_table(db_name.to_string(), &table);
+            let (query, mut rels) = serializer.create_table(db_name.to_string(), &table);
             relations.append(&mut rels);
             conn.query(query).unwrap();
         }
 
-        //add relation tables according the relations in the vector
+        serializer.store_relations(&mut relations);
+        for rel in &serializer.relations {
+            let query = serializer.create_relation_table(db_name.to_string(), &rel);
+            conn.query(query).unwrap();
+        }
 
         let mut targetPool = TargetPool{
             pool: pool.clone(),
@@ -49,7 +54,7 @@ impl GraphQLPool {
         };
 
         GraphQLPool{
-            sender: ConnectionPool::new(targetPool.clone()),
+            sender: ConnectionPool::new(targetPool.clone(), serializer),
         }
     }
 

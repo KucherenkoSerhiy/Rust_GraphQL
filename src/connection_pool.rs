@@ -16,6 +16,7 @@ use env_logger;
 
 use connection::*;
 use def::TargetPool;
+use serialize;
 
 
 pub const SERVER_TOKEN: Token = Token(0);
@@ -28,12 +29,13 @@ pub struct ConnectionPool {
     connections: Slab<Connection>,
     request_messages: Vec<GraphqlMsg>,
     response_messages: Vec<GraphqlMsg>,
-    target: TargetPool
+    target: TargetPool,
+    serializer: serialize::Serializer
 }
 
 impl ConnectionPool {
 
-    pub fn new(targetPool: TargetPool) -> Sender<GraphqlMsg> {
+    pub fn new(targetPool: TargetPool, serializer: serialize::Serializer) -> Sender<GraphqlMsg> {
         let addr: SocketAddr = "0.0.0.0:10000".parse::<SocketAddr>()
             .ok().expect("Failed to parse host:port string");
         let server_socket = TcpListener::bind(&addr).ok().expect("Failed to bind address");
@@ -50,7 +52,8 @@ impl ConnectionPool {
             token_counter: 1,
             request_messages: Vec::new(),
             response_messages: Vec::new(),
-            target: targetPool
+            target: targetPool,
+            serializer: serializer
         };
         pool.create_connections(addr);
 
@@ -120,7 +123,7 @@ impl Handler for ConnectionPool {
                 };
                 let new_token = Token(self.token_counter);
                 self.token_counter += 1;
-                let connection = Connection::new(client_socket, new_token, self.target.clone());
+                let connection = Connection::new(client_socket, new_token, self.target.clone(), self.serializer.clone());
 
                 self.connections.insert(connection);
                 event_loop.register(&self.connections[new_token].socket, new_token,

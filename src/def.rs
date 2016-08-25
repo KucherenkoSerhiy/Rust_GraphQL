@@ -30,7 +30,9 @@ pub struct Query_Object {
     //pub attrs: Option<Vec <String> >
 }
 
+#[derive(Clone)]
 pub struct Relation {
+    pub name: String,
     pub owner: String,
     pub target: String
 }

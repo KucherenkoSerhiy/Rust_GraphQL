@@ -2,6 +2,7 @@ type Human {
   id: text
   name: text
   homePlanet: text
+  friends: [Human]
 }
 
 type Droid {
