@@ -86,11 +86,17 @@ impl Serializer {
         for col in select_structure.attrs.as_ref().unwrap(){
             mysql_select = mysql_select + col.name.as_str();
             if col != last_column {mysql_select = mysql_select + ","};
-            mysql_select = mysql_select + " "
+            mysql_select = mysql_select + " ";
         }
         mysql_select = mysql_select + "FROM " + &(db_name) + "." + &select_structure.name + " ";
-        if let &Some(parameter) = &select_structure.params.as_ref() {
-            mysql_select = mysql_select + "WHERE " + &parameter.0 + "=" + &parameter.1;
+        if let &Some(parameters) = &select_structure.params.as_ref() {
+            let last_param = select_structure.params.as_ref().unwrap().last().unwrap();
+            mysql_select = mysql_select + "WHERE ";
+            for parameter in parameters {
+                mysql_select = mysql_select + &parameter.0 + "=" + &parameter.1;
+                if parameter != last_param {mysql_select = mysql_select + " AND";}
+                mysql_select = mysql_select + " ";
+            };
         }
         mysql_select = mysql_select + ";";
 

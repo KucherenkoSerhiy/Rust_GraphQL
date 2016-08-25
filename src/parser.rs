@@ -10,15 +10,31 @@ use def::*;
 
 named!(parse_param <&[u8],(String,String)>,
   chain!(
-    key: map_res!(alphanumeric, str::from_utf8) ~
+    key: map_res!(
+            alt!(
+                alphanumeric |
+                delimited!(
+                    char!('\"'),
+                    alphanumeric,
+                    char!('\"')
+                )
+            ),
+            str::from_utf8
+         )                                 ~
          space?                            ~
          tag!(":")                         ~
          space?                            ~
     val: map_res!(
-           take_until_either!(")"),
-           str::from_utf8
+            alt!(
+                alphanumeric |
+                delimited!(
+                    char!('\"'),
+                    alphanumeric,
+                    char!('\"')
+                )
+            ),
+            str::from_utf8
          )                                 ~
-         space?                            ~
          multispace?                       ,
     ||{(key.to_string(), val.to_string())}
   )
@@ -34,7 +50,6 @@ named!(parse_field <&[u8],(String,String)>,
            take_until_either!("\n}"),
            str::from_utf8
          )                                 ~
-         space?                            ~
          multispace?                       ,
     ||{(key.to_string(), val.to_string())}
   )
@@ -110,29 +125,20 @@ named!(parse_mutation_type <&[u8], Option<&[u8]> >,
 );
 */
 
-
 /*
 {
-        user (id:1) {
-            name
-            friends {
-              id
-              name
-            }
-        }
+    user (id:1) {
+        name
+        phone
     }
+}
+{
+    Human (id:"1"){
+        name
+        homePlanet
+    }
+}
 */
-
-/*
-map_res
-expected `std::string::String`,
-found `std::result::Result<_, _>`
-
-map
-expected `String`,
-found `std::result::Result<String, std::str::Utf8Error>`
-*/
-//named! (parse_select_object <&[u8], (String, Option<(String, String)>, Vec<String>)>,
 named! (parse_select_object <&[u8], Query_Object>,
     chain!(
         multispace?                      ~
@@ -143,7 +149,12 @@ named! (parse_select_object <&[u8], Query_Object>,
         space?                           ~
         params: delimited!(
             char!('('),
-            parse_param,
+            many0!(chain!(
+                multispace?              ~
+                param: parse_param       ~
+                multispace?,
+                ||{param}
+            )),
             char!(')')
         )?                               ~
         space?                           ~
@@ -151,8 +162,7 @@ named! (parse_select_object <&[u8], Query_Object>,
             char!('{'),
             many0!(chain!(
                 multispace?              ~
-                  attr: parse_select_object ~ //recursivitat
-
+                attr: parse_select_object ~ //recursivitat
                 multispace?,
                 ||{attr}
             )),
@@ -176,7 +186,19 @@ named! (pub parse_select_query <&[u8], Query_Object>,
     )
 );
 
-
+/*
+{
+        user {
+            id: 2
+            name: "user2"
+            friends {
+              id: 1
+              name: "user"
+            }
+        }
+    }
+*/
+//named! (pub parse_insert_query <&[u8], (String, Vec<(String, String)> )>,
 named! (pub parse_insert_query <&[u8], (String, Vec<(String, String)> )>,
     chain!(
         multispace?                              ~
@@ -284,6 +306,12 @@ named! (pub parse_delete_query <&[u8], (String, Option<(String, String)> )>,
 #[test]
 fn test_internal_parser_functions(){
     assert_eq!(
+        parse_param(&b"id: \"1\"
+                    "[..]),
+        IResult::Done(&b""[..], {("id".to_string(), "1".to_string())})
+    );
+
+    assert_eq!(
         parse_field(&b"id : String
                     "[..]),
         IResult::Done(&b""[..], {("id".to_string(), "String".to_string())})
@@ -345,21 +373,36 @@ fn test_get_parser_function(){
     &b"{
         user (id:1) {
             name
+            phone
         }
     }"[..];
     let get_query_data = IResult::Done(&b""[..],
         {Query_Object {
             name:"user".to_string(),
-            params: Some({("id".to_string(), "1".to_string())}),
-            attrs: Some(vec![Query_Object { name: "name".to_string(), params: None, attrs: None }])
+            params: Some(vec![{("id".to_string(), "1".to_string())}]),
+            attrs: Some(vec![
+                Query_Object {
+                    name: "name".to_string(),
+                    params: None,
+                    attrs: None
+                },
+                Query_Object {
+                    name: "phone".to_string(),
+                    params: None,
+                    attrs: None
+                }
+            ])
         }}
     );
-
+/*
+`Done([], Query_Object { name: "user", params: Some([("id", "1")]), attrs: Some([Query_Object { name: "name", params: None, attrs: None }, Query_Object { name: "phone", params: None, attrs: None }]) })`
+`Done([], Query_Object { name: "user", params: Some([("id", "1")]), attrs: Some([Query_Object { name: "name", params: None, attrs: None }]) })`
+*/
     assert_eq!(parse_select_query(get_query), get_query_data);
 
     let get_query =
     &b"{
-        user (id:1) {
+        user (id:\"1\") {
             name
             friends {
               id
@@ -371,7 +414,7 @@ fn test_get_parser_function(){
     let get_query_data = IResult::Done(&b""[..],
                                        {Query_Object {
                                            name:"user".to_string(),
-                                           params: Some({("id".to_string(), "1".to_string())}),
+                                           params: Some(vec![{("id".to_string(), "1".to_string())}]),
                                            attrs: Some(vec![
                                                Query_Object {
                                                     name: "name".to_string(),

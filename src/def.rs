@@ -25,9 +25,8 @@ pub struct TargetPool {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Query_Object {
     pub name: String,
-    pub params: Option<(String, String)>,
+    pub params: Option<Vec <(String, String)> >,
     pub attrs: Option<Vec <Query_Object> >
-    //pub attrs: Option<Vec <String> >
 }
 
 #[derive(Clone)]
