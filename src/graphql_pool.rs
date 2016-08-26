@@ -1,18 +1,12 @@
 use std::vec::Vec;
 use std::str;
-use std::io::prelude::*;
-use std::convert::Into;
-use std::option::Option;
 
 use mysql;
-use mio::{EventLoop, EventSet, PollOpt, Sender};
+use mio::{Sender};
 use eventual::Future;
-use nom::IResult;
 
 use reader;
-use parser;
 use serialize;
-use deserialize;
 use connection_pool::*;
 use connection::*;
 use def::*;
@@ -47,14 +41,14 @@ impl GraphQLPool {
             conn.query(query).unwrap();
         }
 
-        let mut targetPool = TargetPool{
+        let target_pool = TargetPool{
             pool: pool.clone(),
             database: db.clone(),
             working_database_name: db_name.to_string(),
         };
 
         GraphQLPool{
-            sender: ConnectionPool::new(targetPool.clone(), serializer),
+            sender: ConnectionPool::new(target_pool.clone(), serializer),
         }
     }
 

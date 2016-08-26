@@ -1,5 +1,4 @@
 use std::vec::Vec;
-use std::str;
 
 use mysql;
 
@@ -23,18 +22,18 @@ pub struct TargetPool {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Query_Object {
+pub struct QueryObject {
     pub name: String,
     pub params: Option<Vec <(String, String)> >,
-    pub attrs: Option<Vec <Query_Object> >
+    pub attrs: Option<Vec <QueryObject> >
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Mutation_Object {
+pub struct MutationObject {
     pub name: String,
     pub value: Option <String>,
     pub params: Option<Vec <(String, String)> >,
-    pub attrs: Option<Vec <Mutation_Object> >
+    pub attrs: Option<Vec <MutationObject> >
 }
 
 #[derive(Clone)]
@@ -44,7 +43,7 @@ pub struct Relation {
     pub target: String
 }
 
-pub enum GraphQL_Datatype {
+pub enum GraphqlDatatype {
     Number,
     String,
     Boolean,
@@ -52,5 +51,5 @@ pub enum GraphQL_Datatype {
     Value,
     Object,
     Whitespace,
-    null
+    Null
 }

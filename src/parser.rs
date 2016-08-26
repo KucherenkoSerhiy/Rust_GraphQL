@@ -1,10 +1,8 @@
-use nom::{not_line_ending, space, alphanumeric, multispace};
-use nom::{IResult,digit};
-use nom::IResult::*;
+use nom::{space, alphanumeric, multispace};
+use nom::IResult;
 
 use std::str;
 use std::vec::Vec;
-use std::option::Option;
 
 use def::*;
 
@@ -139,7 +137,7 @@ named!(parse_mutation_type <&[u8], Option<&[u8]> >,
     }
 }
 */
-named! (parse_query_object <&[u8], Query_Object>,
+named! (parse_query_object <&[u8], QueryObject>,
     chain!(
         multispace?                      ~
         object: map_res!(
@@ -169,11 +167,11 @@ named! (parse_query_object <&[u8], Query_Object>,
             char!('}')
         )?                                ~
         multispace?,
-        ||{Query_Object{name: object.to_string(), params: params, attrs: attributes}}
+        ||{QueryObject{name: object.to_string(), params: params, attrs: attributes}}
     )
 );
 
-named! (pub parse_query <&[u8], Query_Object>,
+named! (pub parse_query <&[u8], QueryObject>,
     chain!(
         multispace?                              ~
         res: delimited!(
@@ -186,7 +184,7 @@ named! (pub parse_query <&[u8], Query_Object>,
     )
 );
 
-named! (parse_mutation_object <&[u8], Mutation_Object>,
+named! (parse_mutation_object <&[u8], MutationObject>,
     chain!(
         multispace?                      ~
         name: map_res!(
@@ -232,11 +230,11 @@ named! (parse_mutation_object <&[u8], Mutation_Object>,
             char!('}')
         )?                               ~
         multispace?,
-        ||{Mutation_Object{name: name.to_string(), value: value, params: params, attrs: attributes}}
+        ||{MutationObject{name: name.to_string(), value: value, params: params, attrs: attributes}}
     )
 );
 
-named! (pub parse_mutation_query <&[u8], Mutation_Object>,
+named! (pub parse_mutation_query <&[u8], MutationObject>,
     chain!(
         multispace?                              ~
         res: delimited!(
@@ -324,16 +322,16 @@ fn test_get_parser_function(){
         }
     }"[..];
     let get_query_data = IResult::Done(&b""[..],
-        {Query_Object {
+        {QueryObject {
             name:"user".to_string(),
             params: Some(vec![{("id".to_string(), "1".to_string())}]),
             attrs: Some(vec![
-                Query_Object {
+                QueryObject {
                     name: "name".to_string(),
                     params: None,
                     attrs: None
                 },
-                Query_Object {
+                QueryObject {
                     name: "phone".to_string(),
                     params: None,
                     attrs: None
@@ -356,25 +354,25 @@ fn test_get_parser_function(){
     }"[..];
 
     let get_query_data = IResult::Done(&b""[..],
-                                       {Query_Object {
+                                       {QueryObject {
                                            name:"user".to_string(),
                                            params: Some(vec![{("id".to_string(), "1".to_string())}]),
                                            attrs: Some(vec![
-                                               Query_Object {
+                                               QueryObject {
                                                     name: "name".to_string(),
                                                     params: None,
                                                     attrs: None
                                                },
-                                               Query_Object {
+                                               QueryObject {
                                                     name: "friends".to_string(),
                                                     params: None,
                                                     attrs: Some(vec![
-                                                        Query_Object {
+                                                        QueryObject {
                                                             name: "id".to_string(),
                                                             params: None,
                                                             attrs: None
                                                         },
-                                                        Query_Object {
+                                                        QueryObject {
                                                             name: "name".to_string(),
                                                             params: None,
                                                             attrs: None
@@ -398,24 +396,24 @@ fn test_insert_parser_function(){
         }
     }"[..];
     //let mut insert_query_data = IResult::Done(&b""[..], {("Human".to_string(), vec![{("id".to_string(), "1".to_string())}, {("name".to_string(), "Luke".to_string())}, {("homePlanet".to_string(), "Char".to_string())}])});
-    let mut insert_query_data = IResult::Done(&b""[..], {Mutation_Object {
+    let mut insert_query_data = IResult::Done(&b""[..], {MutationObject {
         name: "Human".to_string(),
         value: None,
         params: None,
         attrs: Some(vec![
-                        Mutation_Object {
+                        MutationObject {
                             name: "id".to_string(),
                             value: Some("1".to_string()),
                             params: None,
                             attrs: None
                         },
-                        Mutation_Object {
+                        MutationObject {
                             name: "name".to_string(),
                             value: Some("Luke".to_string()),
                             params: None,
                             attrs: None
                         },
-                        Mutation_Object {
+                        MutationObject {
                             name: "homePlanet".to_string(),
                             value: Some("Char".to_string()),
                             params: None,
@@ -433,30 +431,30 @@ fn test_insert_parser_function(){
             primaryFunction: \"Mechanic\"
         }
     }"[..];
-    insert_query_data = IResult::Done(&b""[..], {Mutation_Object {
+    insert_query_data = IResult::Done(&b""[..], {MutationObject {
         name: "Droid".to_string(),
         value: None,
         params: None,
         attrs: Some(vec![
-                        Mutation_Object {
+                        MutationObject {
                             name: "id".to_string(),
                             value: Some("1".to_string()),
                             params: None,
                             attrs: None
                         },
-                        Mutation_Object {
+                        MutationObject {
                             name: "name".to_string(),
                             value: Some("R2D2".to_string()),
                             params: None,
                             attrs: None
                         },
-                        Mutation_Object {
+                        MutationObject {
                             name: "age".to_string(),
                             value: Some("3".to_string()),
                             params: None,
                             attrs: None
                         },
-                        Mutation_Object {
+                        MutationObject {
                             name: "primaryFunction".to_string(),
                             value: Some("Mechanic".to_string()),
                             params: None,
@@ -483,40 +481,40 @@ fn test_insert_parser_function(){
             }
         }
     }"[..];
-    insert_query_data = IResult::Done(&b""[..], {Mutation_Object {
+    insert_query_data = IResult::Done(&b""[..], {MutationObject {
         name: "Human".to_string(),
         value: None,
         params: None,
         attrs: Some(vec![
-                        Mutation_Object {
+                        MutationObject {
                             name: "id".to_string(),
                             value: Some("1".to_string()),
                             params: None,
                             attrs: None
                         },
-                        Mutation_Object {
+                        MutationObject {
                             name: "name".to_string(),
                             value: Some("Luke".to_string()),
                             params: None,
                             attrs: None
                         },
-                        Mutation_Object {
+                        MutationObject {
                             name: "friends".to_string(),
                             value: None,
                             params: None,
                             attrs: Some(vec![
-                                Mutation_Object {
+                                MutationObject {
                                     name: "Human".to_string(),
                                     value: None,
                                     params: None,
                                     attrs: Some(vec![
-                                        Mutation_Object {
+                                        MutationObject {
                                             name: "id".to_string(),
                                             value: Some("2".to_string()),
                                             params: None,
                                             attrs: None
                                         },
-                                        Mutation_Object {
+                                        MutationObject {
                                             name: "name".to_string(),
                                             value: Some("Leia".to_string()),
                                             params: None,
@@ -524,18 +522,18 @@ fn test_insert_parser_function(){
                                         }
                                     ])
                                 },
-                                Mutation_Object {
+                                MutationObject {
                                     name: "Human".to_string(),
                                     value: None,
                                     params: None,
                                     attrs: Some(vec![
-                                        Mutation_Object {
+                                        MutationObject {
                                             name: "id".to_string(),
                                             value: Some("3".to_string()),
                                             params: None,
                                             attrs: None
                                         },
-                                        Mutation_Object {
+                                        MutationObject {
                                             name: "name".to_string(),
                                             value: Some("Han".to_string()),
                                             params: None,
@@ -559,12 +557,12 @@ fn test_update_parser_function(){
             age: 4
         }
     }"[..];
-    let update_query_data = IResult::Done(&b""[..], {Mutation_Object {
+    let update_query_data = IResult::Done(&b""[..], {MutationObject {
             name: "Droid".to_string(),
             value: None,
             params: Some(vec![{("id".to_string(), ("1".to_string()))}]),
             attrs: Some(vec![
-                Mutation_Object {
+                MutationObject {
                     name: "age".to_string(),
                     value: Some("4".to_string()),
                     params: None,
@@ -581,7 +579,7 @@ fn test_delete_parser_function(){
     &b"{
         user (id:1)
     }"[..];
-    let mut delete_query_data = IResult::Done(&b""[..], {Mutation_Object {
+    let mut delete_query_data = IResult::Done(&b""[..], {MutationObject {
         name: "user".to_string(),
         value: None,
         params: Some(vec![{("id".to_string(), ("1".to_string()))}]),
@@ -593,7 +591,7 @@ fn test_delete_parser_function(){
     &b"{
         user
     }"[..];
-    delete_query_data = IResult::Done(&b""[..], {Mutation_Object {
+    delete_query_data = IResult::Done(&b""[..], {MutationObject {
         name: "user".to_string(),
         value: None,
         params: None,

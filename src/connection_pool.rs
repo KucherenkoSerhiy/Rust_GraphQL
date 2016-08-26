@@ -1,18 +1,12 @@
-use eventual::{Future, Async, Complete};
+use eventual::{Async};
 
 use mio::*;
 use mio::tcp::{TcpStream, TcpListener};
 use mio::util::Slab;
 
 use std::net::SocketAddr;
-use std::borrow::Cow;
-use std::error::Error;
-use std::io;
 use std::thread;
-use std::fmt::Debug;
 use std::vec::Vec;
-
-use env_logger;
 
 use connection::*;
 use def::TargetPool;
@@ -35,7 +29,7 @@ pub struct ConnectionPool {
 
 impl ConnectionPool {
 
-    pub fn new(targetPool: TargetPool, serializer: serialize::Serializer) -> Sender<GraphqlMsg> {
+    pub fn new(target_pool: TargetPool, serializer: serialize::Serializer) -> Sender<GraphqlMsg> {
         let addr: SocketAddr = "0.0.0.0:10000".parse::<SocketAddr>()
             .ok().expect("Failed to parse host:port string");
         let server_socket = TcpListener::bind(&addr).ok().expect("Failed to bind address");
@@ -52,12 +46,12 @@ impl ConnectionPool {
             token_counter: 1,
             request_messages: Vec::new(),
             response_messages: Vec::new(),
-            target: targetPool,
+            target: target_pool,
             serializer: serializer
         };
         pool.create_connections(addr);
 
-        let mut sender = event_loop.channel();
+        let sender = event_loop.channel();
 
         thread::Builder::new().name("event_handler".to_string()).spawn(move || {
             event_loop.run(&mut pool).ok().expect("Failed to start event loop");
@@ -144,7 +138,7 @@ impl Handler for ConnectionPool {
                     if !self.request_messages.is_empty(){
                         //write request to the client and reregister it to readable.
                         //println!("ConnectionPool::ready: have a message");
-                        connection.pushRequest(self.request_messages.remove(0));
+                        connection.push_request(self.request_messages.remove(0));
                         connection.process();
                         event_loop.reregister(&connection.socket, connection.token, EventSet::readable(),
                                               PollOpt::edge() | PollOpt::oneshot()).unwrap();

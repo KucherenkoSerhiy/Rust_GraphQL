@@ -1,4 +1,3 @@
-use std::option::Option;
 use mysql;
 use def;
 
@@ -15,8 +14,10 @@ impl Deserializer {
 
     fn get_tabulation(&self) -> String{
         let mut tabbings = "".to_string();
-        for x in 0..self.tabs {
+        let mut n = 0;
+        while n < self.tabs {
             tabbings = tabbings + "\t";
+            n = n+1;
         }
         tabbings
     }
@@ -33,7 +34,7 @@ impl Deserializer {
         if self.tabs > 0 {self.tabs = self.tabs-1};
     }
 
-    pub fn perform_get(&mut self, pool: &mysql::Pool, query: String, select_structure : &def::Query_Object ) -> String {
+    pub fn perform_get(&mut self, pool: &mysql::Pool, query: String, select_structure : &def::QueryObject ) -> String {
         let mut json = "".to_string();
 
         json = json + &(self.get_tabulation()) + "{" + &(self.endline());
@@ -42,9 +43,9 @@ impl Deserializer {
         json = json + &(self.get_tabulation()) + "\"data\": {" + &(self.endline());
         self.add_tabbing();
 
-        let mut queryResult = pool.prep_exec(query, ()).unwrap();
+        let mut query_result = pool.prep_exec(query, ()).unwrap();
 
-        for result in queryResult.by_ref() {
+        for result in query_result.by_ref() {
             let mut row = result.unwrap();
             let mut resulting_object : String = "".to_string();
 
@@ -55,7 +56,7 @@ impl Deserializer {
                 let data : mysql::Value = row.take(col.name.as_str()).unwrap();
                 //let data : String = row.take(*col).unwrap();
                 match data {
-                    ref Bytes => resulting_object = resulting_object + &(self.get_tabulation()) + "\"" + &col.name + "\": " + &(data.into_str()) + if col != select_structure.attrs.as_ref().unwrap().last().unwrap() {","} else {""} + &(self.endline())
+                    ref bytes => resulting_object = resulting_object + &(self.get_tabulation()) + "\"" + &col.name + "\": " + &(data.into_str()) + if col != select_structure.attrs.as_ref().unwrap().last().unwrap() {","} else {""} + &(self.endline())
                     //_ => unimplemented!()
                 };
             }

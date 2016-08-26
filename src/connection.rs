@@ -1,25 +1,14 @@
-use eventual::{Future, Async, Complete};
-use mio;
-use mio::util::Slab;
+use eventual::Complete;
 use mio::tcp::*;
-use mio::{Token,EventLoop, Sender, TryRead, TryWrite, EventSet, PollOpt, Handler};
-use std::{mem, str};
-use std::net::{SocketAddr,IpAddr,Ipv4Addr};
-use std::io::Error;
-use std::collections::{VecDeque,BTreeMap, HashMap};
-use std::io;
-use std::io::ErrorKind;
-use bytes::buf::ByteBuf;
-use log::LogLevel;
+use mio::Token;
+use std::str;
 
 use nom::IResult;
-use serialize;
 use serialize::*;
 use deserialize::*;
 
 use def::TargetPool;
 use parser;
-use connection_pool::*;
 
 
 pub enum GraphqlMsg{
@@ -50,19 +39,19 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(socket:TcpStream, token: Token, targetPool: TargetPool, serializer: Serializer) -> Connection{
+    pub fn new(socket:TcpStream, token: Token, target_pool: TargetPool, serializer: Serializer) -> Connection{
         Connection {
             socket: socket,
             token: token,
             request_messages: Vec::new(),
             response_messages: Vec::new(),
-            target: targetPool,
+            target: target_pool,
             serializer: serializer,
             deserializer: Deserializer::new()
         }
     }
 
-    pub fn pushRequest(&mut self, msg: GraphqlMsg) {
+    pub fn push_request(&mut self, msg: GraphqlMsg) {
         self.request_messages.push(msg);
     }
 
@@ -109,7 +98,7 @@ impl Connection {
         let select_query_data = parser::parse_query(query.as_bytes());
         match select_query_data{
             IResult::Done(_, select_structure) => {
-                let mut mysql_select: String = self.serializer.perform_get((&self.target.working_database_name).to_string(), &select_structure);
+                let mysql_select: String = self.serializer.perform_get((&self.target.working_database_name).to_string(), &select_structure);
                 //println!("CONNECTION::GET:\n{}", mysql_select);
                 self.deserializer.perform_get(&self.target.pool, mysql_select, &select_structure)
             },
@@ -126,7 +115,7 @@ impl Connection {
             //IResult::Done(input, insert_structure) => {
             IResult::Done(_, insert_structure) => {
 
-                let mut mysql_insert: String = self.serializer.perform_add_mutation((&self.target.working_database_name).to_string(), &insert_structure);
+                let mysql_insert: String = self.serializer.perform_add_mutation((&self.target.working_database_name).to_string(), &insert_structure);
                 //println!("CONNECTION::ADD:\n{}", mysql_insert);
                 let mut conn = self.target.pool.get_conn().unwrap();
                 conn.query(&mysql_insert).unwrap();
@@ -145,7 +134,7 @@ impl Connection {
         match update_query_data{
             //IResult::Done(input, update_structure) => {
             IResult::Done(_, update_structure) => {
-                let mut mysql_update: String = self.serializer.perform_update_mutation((&self.target.working_database_name).to_string(), &update_structure);
+                let mysql_update: String = self.serializer.perform_update_mutation((&self.target.working_database_name).to_string(), &update_structure);
 
                 //println!("parsed");
                 let mut conn = self.target.pool.get_conn().unwrap();
@@ -165,7 +154,7 @@ impl Connection {
         match delete_query_data{
             //IResult::Done(input, delete_structure) => {
             IResult::Done(_, delete_structure) => {
-                let mut mysql_delete: String = self.serializer.perform_delete_mutation((&self.target.working_database_name).to_string(), &delete_structure);
+                let mysql_delete: String = self.serializer.perform_delete_mutation((&self.target.working_database_name).to_string(), &delete_structure);
                 //println!("parsed");
                 let mut conn = self.target.pool.get_conn().unwrap();
                 conn.query(&mysql_delete).unwrap();

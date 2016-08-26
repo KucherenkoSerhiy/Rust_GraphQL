@@ -1,6 +1,4 @@
-use std::option::Option;
 use std::vec::Vec;
-use std::error::Error;
 use def;
 
 #[derive(Clone)]
@@ -80,7 +78,7 @@ impl Serializer {
         load_rel_query
     }
 
-    pub fn perform_get(&self, db_name: String, select_structure : &def::Query_Object) -> String{
+    pub fn perform_get(&self, db_name: String, select_structure : &def::QueryObject) -> String{
         let last_column = select_structure.attrs.as_ref().unwrap().last().unwrap();
         let mut mysql_select: String = "SELECT ".to_string();
         for col in select_structure.attrs.as_ref().unwrap(){
@@ -104,7 +102,7 @@ impl Serializer {
     }
 
     //pub fn perform_add_mutation(&self, db_name: String, insert_structure : &(String, Vec<(String, String)> )) -> String{
-    pub fn perform_add_mutation(&self, db_name: String, insert_structure : &def::Mutation_Object) -> String{
+    pub fn perform_add_mutation(&self, db_name: String, insert_structure : &def::MutationObject) -> String{
         let last_column = insert_structure.attrs.as_ref().unwrap().last().unwrap();
 
         let mut mysql_insert: String = "INSERT INTO ".to_string() + &db_name + "." + &insert_structure.name + "(\n    ";
@@ -126,7 +124,7 @@ impl Serializer {
         mysql_insert
     }
 
-    pub fn perform_update_mutation(&self, db_name: String, update_structure : &def::Mutation_Object) -> String{
+    pub fn perform_update_mutation(&self, db_name: String, update_structure : &def::MutationObject) -> String{
         let last_column = &update_structure.attrs.as_ref().unwrap().last().unwrap();
         let mut mysql_update: String = "UPDATE ".to_string() + &db_name + "." + &update_structure.name + " SET ";
         /*COLUMNS*/
@@ -151,7 +149,7 @@ impl Serializer {
         mysql_update
     }
 
-    pub fn perform_delete_mutation(&self, db_name: String, delete_structure : &def::Mutation_Object) -> String{
+    pub fn perform_delete_mutation(&self, db_name: String, delete_structure : &def::MutationObject) -> String{
         let mut mysql_delete: String = "DELETE FROM ".to_string() + &db_name + "." + &delete_structure.name + " ";
         if let &Some(parameters) = &delete_structure.params.as_ref() {
             let last_param = delete_structure.params.as_ref().unwrap().last().unwrap();
