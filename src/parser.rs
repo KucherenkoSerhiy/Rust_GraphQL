@@ -139,7 +139,7 @@ named!(parse_mutation_type <&[u8], Option<&[u8]> >,
     }
 }
 */
-named! (parse_select_object <&[u8], Query_Object>,
+named! (parse_query_object <&[u8], Query_Object>,
     chain!(
         multispace?                      ~
         object: map_res!(
@@ -162,7 +162,7 @@ named! (parse_select_object <&[u8], Query_Object>,
             char!('{'),
             many0!(chain!(
                 multispace?              ~
-                attr: parse_select_object ~ //recursion
+                attr: parse_query_object ~ //recursion
                 multispace?,
                 ||{attr}
             )),
@@ -173,12 +173,12 @@ named! (parse_select_object <&[u8], Query_Object>,
     )
 );
 
-named! (pub parse_select_query <&[u8], Query_Object>,
+named! (pub parse_query <&[u8], Query_Object>,
     chain!(
         multispace?                              ~
         res: delimited!(
             char!('{'),
-            parse_select_object,
+            parse_query_object,
             char!('}')
         )                                        ~
         multispace?,
@@ -186,14 +186,14 @@ named! (pub parse_select_query <&[u8], Query_Object>,
     )
 );
 
-named! (parse_insert_object <&[u8], Mutation_Object>,
+named! (parse_mutation_object <&[u8], Mutation_Object>,
     chain!(
         multispace?                      ~
         name: map_res!(
             alphanumeric,
             str::from_utf8
         )                                ~
-        multispace?                      ~
+        space?                           ~
         value: chain! (
             tag!(":")                    ~
             space?                       ~
@@ -210,98 +210,38 @@ named! (parse_insert_object <&[u8], Mutation_Object>,
             ),
             ||{res.to_string()}
         )?                               ~
+        params: delimited!(
+            char!('('),
+            many0!(chain!(
+                multispace?              ~
+                res: parse_param         ~
+                multispace?,
+                ||{res}
+            )),
+            char!(')')
+        )?                               ~
+        space?                           ~
         attributes: delimited!(
             char!('{'),
             many0!(chain!(
                 multispace?              ~
-                res: parse_insert_object ~ //recursion
+                res: parse_mutation_object ~ //recursion
                 multispace?,
                 ||{res}
             )),
             char!('}')
         )?                               ~
         multispace?,
-        ||{Mutation_Object{name: name.to_string(), value: value, params: None, attrs: attributes}}
+        ||{Mutation_Object{name: name.to_string(), value: value, params: params, attrs: attributes}}
     )
 );
 
-named! (pub parse_insert_query <&[u8], Mutation_Object>,
+named! (pub parse_mutation_query <&[u8], Mutation_Object>,
     chain!(
         multispace?                              ~
         res: delimited!(
             char!('{'),
-            parse_insert_object,
-            char!('}')
-        )                                        ~
-        multispace?,
-        ||{res}
-    )
-);
-
-named! (pub parse_update_query <&[u8], (String, (String, String), Vec<(String, String)> )>,
-    chain!(
-        multispace?                              ~
-        res: delimited!(
-            char!('{'),
-            chain!(
-                multispace?                      ~
-                object: map_res!(
-                            alphanumeric,
-                            str::from_utf8
-                        )                        ~
-                space?                           ~
-                params: delimited!(
-                    char!('('),
-                    parse_param,
-                    char!(')')
-                )                                ~
-                space?                           ~
-                mutations: delimited!(
-                    char!('{'),
-                    many0!(chain!(
-                        multispace?              ~
-                        res: parse_field         ~
-                        multispace?,
-                        ||{res}
-                    )),
-                    char!('}')
-                )                                ~
-                multispace?,
-                ||{(object.to_string(), params, mutations)}
-            ),
-            char!('}')
-        )                                        ~
-        multispace?,
-        ||{res}
-    )
-);
-
-
-named! (pub parse_delete_query <&[u8], (String, Option<(String, String)> )>,
-    chain!(
-        multispace?                              ~
-        res: delimited!(
-            char!('{'),
-            chain!(
-                multispace?                      ~
-                object: map_res!(
-                            alphanumeric,
-                            str::from_utf8
-                        )                        ~
-                multispace?                      ~
-                attributes: delimited!(
-                    char!('('),
-                    chain!(
-                        multispace?              ~
-                        res: parse_param         ~
-                        multispace?,
-                        ||{res}
-                    ),
-                    char!(')')
-                )?                               ~
-                multispace?,
-                ||{(object.to_string(), attributes)}
-            ),
+            parse_mutation_object,
             char!('}')
         )                                        ~
         multispace?,
@@ -402,7 +342,7 @@ fn test_get_parser_function(){
         }}
     );
 
-    assert_eq!(parse_select_query(get_query), get_query_data);
+    assert_eq!(parse_query(get_query), get_query_data);
 
     let get_query =
     &b"{
@@ -444,7 +384,7 @@ fn test_get_parser_function(){
                                             ])
                                        }}
     );
-    assert_eq!(parse_select_query(get_query), get_query_data);
+    assert_eq!(parse_query(get_query), get_query_data);
 }
 
 #[test]
@@ -483,7 +423,7 @@ fn test_insert_parser_function(){
                         }
                     ])
     }});
-    assert_eq!(parse_insert_query(insert_query), insert_query_data);
+    assert_eq!(parse_mutation_query(insert_query), insert_query_data);
     insert_query =
     &b"{
         Droid {
@@ -524,7 +464,7 @@ fn test_insert_parser_function(){
                         }
                     ])
     }});
-    assert_eq!(parse_insert_query(insert_query), insert_query_data);
+    assert_eq!(parse_mutation_query(insert_query), insert_query_data);
 
     insert_query =
     &b"{
@@ -607,7 +547,7 @@ fn test_insert_parser_function(){
                         }
                     ])
     }});
-    assert_eq!(parse_insert_query(insert_query), insert_query_data);
+    assert_eq!(parse_mutation_query(insert_query), insert_query_data);
 
 }
 
@@ -619,8 +559,20 @@ fn test_update_parser_function(){
             age: 4
         }
     }"[..];
-    let update_query_data = IResult::Done(&b""[..], {("Droid".to_string(), ("id".to_string(), "1".to_string()), vec![{("age".to_string(), "4".to_string())}])});
-    assert_eq!(parse_update_query(update_query), update_query_data);
+    let update_query_data = IResult::Done(&b""[..], {Mutation_Object {
+            name: "Droid".to_string(),
+            value: None,
+            params: Some(vec![{("id".to_string(), ("1".to_string()))}]),
+            attrs: Some(vec![
+                Mutation_Object {
+                    name: "age".to_string(),
+                    value: Some("4".to_string()),
+                    params: None,
+                    attrs: None
+                }
+            ])
+    }});
+    assert_eq!(parse_mutation_query(update_query), update_query_data);
 }
 
 #[test]
@@ -629,13 +581,23 @@ fn test_delete_parser_function(){
     &b"{
         user (id:1)
     }"[..];
-    let mut delete_query_data = IResult::Done(&b""[..], {("user".to_string(), Some(("id".to_string(), "1".to_string())))});
-    assert_eq!(parse_delete_query(delete_query), delete_query_data);
+    let mut delete_query_data = IResult::Done(&b""[..], {Mutation_Object {
+        name: "user".to_string(),
+        value: None,
+        params: Some(vec![{("id".to_string(), ("1".to_string()))}]),
+        attrs: None
+    }});
+    assert_eq!(parse_mutation_query(delete_query), delete_query_data);
 
     delete_query =
     &b"{
         user
     }"[..];
-    delete_query_data = IResult::Done(&b""[..], {("user".to_string(), None)});
-    assert_eq!(parse_delete_query(delete_query), delete_query_data);
+    delete_query_data = IResult::Done(&b""[..], {Mutation_Object {
+        name: "user".to_string(),
+        value: None,
+        params: None,
+        attrs: None
+    }});
+    assert_eq!(parse_mutation_query(delete_query), delete_query_data);
 }

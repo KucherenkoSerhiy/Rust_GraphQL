@@ -126,25 +126,41 @@ impl Serializer {
         mysql_insert
     }
 
-    pub fn perform_update_mutation(&self, db_name: String, update_structure : &(String, (String, String), Vec<(String, String)> )) -> String{
-        let last_column = &update_structure.2.last().unwrap();
-        let mut mysql_update: String = "UPDATE ".to_string() + &db_name + "." + &update_structure.0 + " SET ";
+    pub fn perform_update_mutation(&self, db_name: String, update_structure : &def::Mutation_Object) -> String{
+        let last_column = &update_structure.attrs.as_ref().unwrap().last().unwrap();
+        let mut mysql_update: String = "UPDATE ".to_string() + &db_name + "." + &update_structure.name + " SET ";
         /*COLUMNS*/
-        for col in &update_structure.2{
-            mysql_update = mysql_update + &col.0 + " = " + &col.1;
-            if col.0 != last_column.0 {mysql_update = mysql_update + ","};
+        for col in update_structure.attrs.as_ref().unwrap(){
+            mysql_update = mysql_update + col.name.as_str() + " = " + col.value.as_ref().unwrap().as_str();
+            if col.name != last_column.name {mysql_update = mysql_update + ","};
             mysql_update = mysql_update + " ";
         }
 
-        mysql_update = mysql_update + "WHERE " + &(update_structure.1).0 + " = " + &(update_structure.1).1 + ";";
+        if let &Some(parameters) = &update_structure.params.as_ref() {
+            let last_param = update_structure.params.as_ref().unwrap().last().unwrap();
+            mysql_update = mysql_update + "WHERE ";
+            for parameter in parameters {
+                mysql_update = mysql_update + &parameter.0 + "=" + &parameter.1;
+                if parameter != last_param {mysql_update = mysql_update + " AND";}
+                mysql_update = mysql_update + " ";
+            };
+        }
+
+        mysql_update = mysql_update + ";";
 
         mysql_update
     }
 
-    pub fn perform_delete_mutation(&self, db_name: String, delete_structure : &(String, Option<(String, String)> )) -> String{
-        let mut mysql_delete: String = "DELETE FROM ".to_string() + &db_name + "." + &delete_structure.0 + " ";
-        if let Some(id) = delete_structure.1.as_ref() {
-            mysql_delete = mysql_delete + "WHERE " + &id.0 + "=" + &id.1;
+    pub fn perform_delete_mutation(&self, db_name: String, delete_structure : &def::Mutation_Object) -> String{
+        let mut mysql_delete: String = "DELETE FROM ".to_string() + &db_name + "." + &delete_structure.name + " ";
+        if let &Some(parameters) = &delete_structure.params.as_ref() {
+            let last_param = delete_structure.params.as_ref().unwrap().last().unwrap();
+            mysql_delete = mysql_delete + "WHERE ";
+            for parameter in parameters {
+                mysql_delete = mysql_delete + &parameter.0 + "=" + &parameter.1;
+                if parameter != last_param {mysql_delete = mysql_delete + " AND";}
+                mysql_delete = mysql_delete + " ";
+            };
         }
         mysql_delete = mysql_delete + ";";
 

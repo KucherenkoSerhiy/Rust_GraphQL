@@ -106,7 +106,7 @@ impl Connection {
 
     pub fn get (&mut self, query: &str) -> String {
         //println!("Graph_QL_Pool::get:\n{}\n---------------------------", query);
-        let select_query_data = parser::parse_select_query(query.as_bytes());
+        let select_query_data = parser::parse_query(query.as_bytes());
         match select_query_data{
             IResult::Done(_, select_structure) => {
                 let mut mysql_select: String = self.serializer.perform_get((&self.target.working_database_name).to_string(), &select_structure);
@@ -121,7 +121,7 @@ impl Connection {
 
     pub fn add (&mut self, query: &str) -> String {
         //println!("Graph_QL_Pool::add:\n{}\n---------------------------", query);
-        let insert_query_data = parser::parse_insert_query(query.as_bytes());
+        let insert_query_data = parser::parse_mutation_query(query.as_bytes());
         match insert_query_data{
             //IResult::Done(input, insert_structure) => {
             IResult::Done(_, insert_structure) => {
@@ -141,7 +141,7 @@ impl Connection {
 
     pub fn update (&mut self, query: &str) -> String {
         //println!("Graph_QL_Pool::update:\n{}\n---------------------------", query);
-        let update_query_data = parser::parse_update_query(query.as_bytes());
+        let update_query_data = parser::parse_mutation_query(query.as_bytes());
         match update_query_data{
             //IResult::Done(input, update_structure) => {
             IResult::Done(_, update_structure) => {
@@ -161,7 +161,7 @@ impl Connection {
 
     pub fn delete (&mut self, query: &str) -> String {
         //println!("Graph_QL_Pool::delete:\n{}\n---------------------------", query);
-        let delete_query_data = parser::parse_delete_query(query.as_bytes());
+        let delete_query_data = parser::parse_mutation_query(query.as_bytes());
         match delete_query_data{
             //IResult::Done(input, delete_structure) => {
             IResult::Done(_, delete_structure) => {
