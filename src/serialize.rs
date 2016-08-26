@@ -33,8 +33,7 @@ impl Serializer {
         let mut rels : Vec<def::Relation> = Vec::new();
 
         let mut load_table_query: String = "".to_string();
-        load_table_query = load_table_query + "CREATE TABLE IF NOT EXISTS " + &db_name + "." + &table.name; load_table_query = load_table_query + "(
-        " + &table.name + "_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT";
+        load_table_query = load_table_query + "CREATE TABLE IF NOT EXISTS " + &db_name + "." + &table.name; load_table_query = load_table_query + "(\n    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT";
         for column in &table.columns {
             if column.db_type.starts_with("["){
                 if column.db_type.ends_with("]"){
@@ -101,10 +100,19 @@ impl Serializer {
         mysql_select
     }
 
-    //pub fn perform_add_mutation(&self, db_name: String, insert_structure : &(String, Vec<(String, String)> )) -> String{
+    fn perform_add_rels(&self, rels: &def::MutationObject) -> String{
+        for rel in rels.attrs.as_ref().unwrap(){
+            if let Some(params) = rel.params.as_ref(){
+                println! ("GOTCHA");
+            }
+        }
+        "".to_string()
+    }
+
     pub fn perform_add_mutation(&self, db_name: String, insert_structure : &def::MutationObject) -> String{
         let last_column = insert_structure.attrs.as_ref().unwrap().last().unwrap();
 
+        let mut mysql_insert_rels: String = "".to_string();
         let mut mysql_insert: String = "INSERT INTO ".to_string() + &db_name + "." + &insert_structure.name + "(\n    ";
         /*COLUMNS*/
         for col in insert_structure.attrs.as_ref().unwrap(){
@@ -113,14 +121,21 @@ impl Serializer {
             mysql_insert = mysql_insert + " ";
         }
 
-        mysql_insert = mysql_insert + ")\n" + "VALUES (\n    ";
+        mysql_insert = mysql_insert + "\n)\n" + "VALUES (\n    ";
         for col in insert_structure.attrs.as_ref().unwrap(){
-            mysql_insert = mysql_insert + "\"" + col.value.as_ref().unwrap().as_str() + "\"";;
-            if col.value.as_ref().unwrap() != last_column.value.as_ref().unwrap() {mysql_insert = mysql_insert + ","};
-            mysql_insert = mysql_insert + " ";
+            if let Some(val) = col.value.as_ref(){
+                mysql_insert = mysql_insert + "\"" + val.as_str() + "\"";;
+                if val != last_column.value.as_ref().unwrap() {mysql_insert = mysql_insert + ","};
+                mysql_insert = mysql_insert + " ";
+            }
+            else {
+                mysql_insert_rels = mysql_insert_rels + self.perform_add_rels(col).as_str();
+            }
         }
-        mysql_insert = mysql_insert + ");";
+        mysql_insert = mysql_insert + "\n);\n";
 
+        mysql_insert = mysql_insert + mysql_insert_rels.as_str();
+        println!("\n\n\n\n\n{}\n\n\n\n\n", mysql_insert);
         mysql_insert
     }
 

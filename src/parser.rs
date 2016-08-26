@@ -141,7 +141,14 @@ named! (parse_query_object <&[u8], QueryObject>,
     chain!(
         multispace?                      ~
         object: map_res!(
-                    alphanumeric,
+                    alt!(
+                        alphanumeric |
+                        delimited!(
+                            char!('\"'),
+                            take_until_either!("\""),
+                            char!('\"')
+                        )
+                    ),
                     str::from_utf8
                 )                        ~
         space?                           ~
@@ -188,7 +195,14 @@ named! (parse_mutation_object <&[u8], MutationObject>,
     chain!(
         multispace?                      ~
         name: map_res!(
-            alphanumeric,
+            alt!(
+                alphanumeric |
+                delimited!(
+                    char!('\"'),
+                    take_until_either!("\""),
+                    char!('\"')
+                )
+            ),
             str::from_utf8
         )                                ~
         space?                           ~
@@ -200,7 +214,7 @@ named! (parse_mutation_object <&[u8], MutationObject>,
                     alphanumeric |
                     delimited!(
                         char!('\"'),
-                        alphanumeric,
+                        take_until_either!("\""),
                         char!('\"')
                     )
                 ),
@@ -463,19 +477,34 @@ fn test_insert_parser_function(){
                     ])
     }});
     assert_eq!(parse_mutation_query(insert_query), insert_query_data);
-
+/*
+{
+    Controller {
+        id: 1
+        name: Queen
+        controls: {
+            Droid (
+                Droid_id: \"16\"
+            )
+            Droid (
+                name: R2D2
+            )
+        }
+    }
+}
+*/
     insert_query =
     &b"{
         Human {
-            id: 1
-            name: Luke
+            \"id\": 1
+            \"name\": \"Luke\"
             friends {
                 Human (
-                    id: 2
+                    \"id\": 2
                     name: Leia
                 )
                 Human (
-                    id: 3
+                    \"id\": 3
                     name: Han
                 )
             }

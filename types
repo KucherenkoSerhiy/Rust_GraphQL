@@ -1,19 +1,16 @@
 type Human {
-  id: text
   name: text
   homePlanet: text
   friends: [Human]
 }
 
 type Droid {
-  id: int
   name: varchar(12)
   age: int
   primaryFunction: varchar(20)
 }
 
 type Controller {
-  id: int
   name: text(2048)
   controls: [Droid]
 }

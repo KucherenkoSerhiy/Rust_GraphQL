@@ -358,16 +358,33 @@ fn test_db_creation_and_crud () {
     }
     ";
 
-    graph_ql_pool.add(add_droid_query);
-    let mut selected_droid = graph_ql_pool.get(get_droid_query);
+    //graph_ql_pool.add(add_droid_query);
+    //let mut selected_droid = graph_ql_pool.get(get_droid_query);
     //println!("TEST {}", selected_droid);
 
-    graph_ql_pool.update(update_droid_query);
-    selected_droid = graph_ql_pool.get(get_droid_query);
+    //graph_ql_pool.update(update_droid_query);
+    //selected_droid = graph_ql_pool.get(get_droid_query);
     //println!("TEST {}", selected_droid);
 
-    graph_ql_pool.delete(delete_droid_query);
+    //graph_ql_pool.delete(delete_droid_query);
 
+
+    let create_controller_query =
+    "{
+        Controller {
+            id: 1
+            name: Queen
+            controls: {
+                Droid (
+                    \"id\": 1
+                )
+                Droid (
+                    name: R2D2
+                )
+            }
+        }
+    }";
+    graph_ql_pool.add(create_controller_query);
     //graph_ql_pool.destroy_database();
 
 }
