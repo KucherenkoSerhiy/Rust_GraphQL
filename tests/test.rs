@@ -279,7 +279,6 @@ fn test_db_creation_and_crud () {
     "
     {
         Human {
-            id: 1
             name: Luke
             homePlanet: Char
         }
@@ -372,9 +371,8 @@ fn test_db_creation_and_crud () {
     let create_controller_query =
     "{
         Controller {
-            id: 1
             name: Queen
-            controls: {
+            controls {
                 Droid (
                     \"id\": 1
                 )

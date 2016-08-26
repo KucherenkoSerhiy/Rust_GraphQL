@@ -477,22 +477,7 @@ fn test_insert_parser_function(){
                     ])
     }});
     assert_eq!(parse_mutation_query(insert_query), insert_query_data);
-/*
-{
-    Controller {
-        id: 1
-        name: Queen
-        controls: {
-            Droid (
-                Droid_id: \"16\"
-            )
-            Droid (
-                name: R2D2
-            )
-        }
-    }
-}
-*/
+
     insert_query =
     &b"{
         Human {
