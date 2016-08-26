@@ -105,7 +105,7 @@ impl Connection {
     }
 
     pub fn get (&mut self, query: &str) -> String {
-        println!("Graph_QL_Pool::get:\n{}\n---------------------------", query);
+        //println!("Graph_QL_Pool::get:\n{}\n---------------------------", query);
         let select_query_data = parser::parse_select_query(query.as_bytes());
         match select_query_data{
             IResult::Done(_, select_structure) => {

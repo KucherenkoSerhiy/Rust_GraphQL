@@ -29,6 +29,14 @@ pub struct Query_Object {
     pub attrs: Option<Vec <Query_Object> >
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct Mutation_Object {
+    pub name: String,
+    pub value: Option <String>,
+    pub params: Option<Vec <(String, String)> >,
+    pub attrs: Option<Vec <Mutation_Object> >
+}
+
 #[derive(Clone)]
 pub struct Relation {
     pub name: String,

@@ -162,7 +162,7 @@ named! (parse_select_object <&[u8], Query_Object>,
             char!('{'),
             many0!(chain!(
                 multispace?              ~
-                attr: parse_select_object ~ //recursivitat
+                attr: parse_select_object ~ //recursion
                 multispace?,
                 ||{attr}
             )),
@@ -186,44 +186,51 @@ named! (pub parse_select_query <&[u8], Query_Object>,
     )
 );
 
-/*
-{
-        user {
-            id: 2
-            name: "user2"
-            friends {
-              id: 1
-              name: "user"
-            }
-        }
-    }
-*/
-//named! (pub parse_insert_query <&[u8], (String, Vec<(String, String)> )>,
-named! (pub parse_insert_query <&[u8], (String, Vec<(String, String)> )>,
+named! (parse_insert_object <&[u8], Mutation_Object>,
+    chain!(
+        multispace?                      ~
+        name: map_res!(
+            alphanumeric,
+            str::from_utf8
+        )                                ~
+        multispace?                      ~
+        value: chain! (
+            tag!(":")                    ~
+            space?                       ~
+            res: map_res!(
+                alt!(
+                    alphanumeric |
+                    delimited!(
+                        char!('\"'),
+                        alphanumeric,
+                        char!('\"')
+                    )
+                ),
+                str::from_utf8
+            ),
+            ||{res.to_string()}
+        )?                               ~
+        attributes: delimited!(
+            char!('{'),
+            many0!(chain!(
+                multispace?              ~
+                res: parse_insert_object ~ //recursion
+                multispace?,
+                ||{res}
+            )),
+            char!('}')
+        )?                               ~
+        multispace?,
+        ||{Mutation_Object{name: name.to_string(), value: value, params: None, attrs: attributes}}
+    )
+);
+
+named! (pub parse_insert_query <&[u8], Mutation_Object>,
     chain!(
         multispace?                              ~
         res: delimited!(
             char!('{'),
-            chain!(
-                multispace?                      ~
-                object: map_res!(
-                            alphanumeric,
-                            str::from_utf8
-                        )                        ~
-                multispace?                      ~
-                attributes: delimited!(
-                    char!('{'),
-                    many0!(chain!(
-                        multispace?              ~
-                        res: parse_field         ~
-                        multispace?,
-                        ||{res}
-                    )),
-                    char!('}')
-                )                                ~
-                multispace?,
-                ||{(object.to_string(), attributes)}
-            ),
+            parse_insert_object,
             char!('}')
         )                                        ~
         multispace?,
@@ -394,10 +401,7 @@ fn test_get_parser_function(){
             ])
         }}
     );
-/*
-`Done([], Query_Object { name: "user", params: Some([("id", "1")]), attrs: Some([Query_Object { name: "name", params: None, attrs: None }, Query_Object { name: "phone", params: None, attrs: None }]) })`
-`Done([], Query_Object { name: "user", params: Some([("id", "1")]), attrs: Some([Query_Object { name: "name", params: None, attrs: None }]) })`
-*/
+
     assert_eq!(parse_select_query(get_query), get_query_data);
 
     let get_query =
@@ -453,21 +457,158 @@ fn test_insert_parser_function(){
             homePlanet: Char
         }
     }"[..];
-    let mut insert_query_data = IResult::Done(&b""[..], {("Human".to_string(), vec![{("id".to_string(), "1".to_string())}, {("name".to_string(), "Luke".to_string())}, {("homePlanet".to_string(), "Char".to_string())}])});
+    //let mut insert_query_data = IResult::Done(&b""[..], {("Human".to_string(), vec![{("id".to_string(), "1".to_string())}, {("name".to_string(), "Luke".to_string())}, {("homePlanet".to_string(), "Char".to_string())}])});
+    let mut insert_query_data = IResult::Done(&b""[..], {Mutation_Object {
+        name: "Human".to_string(),
+        value: None,
+        params: None,
+        attrs: Some(vec![
+                        Mutation_Object {
+                            name: "id".to_string(),
+                            value: Some("1".to_string()),
+                            params: None,
+                            attrs: None
+                        },
+                        Mutation_Object {
+                            name: "name".to_string(),
+                            value: Some("Luke".to_string()),
+                            params: None,
+                            attrs: None
+                        },
+                        Mutation_Object {
+                            name: "homePlanet".to_string(),
+                            value: Some("Char".to_string()),
+                            params: None,
+                            attrs: None
+                        }
+                    ])
+    }});
     assert_eq!(parse_insert_query(insert_query), insert_query_data);
-
     insert_query =
     &b"{
         Droid {
             id: 1
-            name: R2D2
+            name: \"R2D2\"
             age: 3
-            primaryFunction: Mechanic
-            created: STR_TO_DATE('1-01-2012', '%d-%m-%Y')
+            primaryFunction: \"Mechanic\"
         }
     }"[..];
-    insert_query_data = IResult::Done(&b""[..], {("Droid".to_string(), vec![{("id".to_string(), "1".to_string())}, {("name".to_string(), "R2D2".to_string())}, {("age".to_string(), "3".to_string())}, {("primaryFunction".to_string(), "Mechanic".to_string())}, {("created".to_string(), "STR_TO_DATE('1-01-2012', '%d-%m-%Y')".to_string())}])});
+    insert_query_data = IResult::Done(&b""[..], {Mutation_Object {
+        name: "Droid".to_string(),
+        value: None,
+        params: None,
+        attrs: Some(vec![
+                        Mutation_Object {
+                            name: "id".to_string(),
+                            value: Some("1".to_string()),
+                            params: None,
+                            attrs: None
+                        },
+                        Mutation_Object {
+                            name: "name".to_string(),
+                            value: Some("R2D2".to_string()),
+                            params: None,
+                            attrs: None
+                        },
+                        Mutation_Object {
+                            name: "age".to_string(),
+                            value: Some("3".to_string()),
+                            params: None,
+                            attrs: None
+                        },
+                        Mutation_Object {
+                            name: "primaryFunction".to_string(),
+                            value: Some("Mechanic".to_string()),
+                            params: None,
+                            attrs: None
+                        }
+                    ])
+    }});
     assert_eq!(parse_insert_query(insert_query), insert_query_data);
+
+    insert_query =
+    &b"{
+        Human {
+            id: 1
+            name: Luke
+            friends {
+                Human {
+                    id: 2
+                    name: Leia
+                }
+                Human {
+                    id: 3
+                    name: Han
+                }
+            }
+        }
+    }"[..];
+    insert_query_data = IResult::Done(&b""[..], {Mutation_Object {
+        name: "Human".to_string(),
+        value: None,
+        params: None,
+        attrs: Some(vec![
+                        Mutation_Object {
+                            name: "id".to_string(),
+                            value: Some("1".to_string()),
+                            params: None,
+                            attrs: None
+                        },
+                        Mutation_Object {
+                            name: "name".to_string(),
+                            value: Some("Luke".to_string()),
+                            params: None,
+                            attrs: None
+                        },
+                        Mutation_Object {
+                            name: "friends".to_string(),
+                            value: None,
+                            params: None,
+                            attrs: Some(vec![
+                                Mutation_Object {
+                                    name: "Human".to_string(),
+                                    value: None,
+                                    params: None,
+                                    attrs: Some(vec![
+                                        Mutation_Object {
+                                            name: "id".to_string(),
+                                            value: Some("2".to_string()),
+                                            params: None,
+                                            attrs: None
+                                        },
+                                        Mutation_Object {
+                                            name: "name".to_string(),
+                                            value: Some("Leia".to_string()),
+                                            params: None,
+                                            attrs: None
+                                        }
+                                    ])
+                                },
+                                Mutation_Object {
+                                    name: "Human".to_string(),
+                                    value: None,
+                                    params: None,
+                                    attrs: Some(vec![
+                                        Mutation_Object {
+                                            name: "id".to_string(),
+                                            value: Some("3".to_string()),
+                                            params: None,
+                                            attrs: None
+                                        },
+                                        Mutation_Object {
+                                            name: "name".to_string(),
+                                            value: Some("Han".to_string()),
+                                            params: None,
+                                            attrs: None
+                                        }
+                                    ])
+                                }
+                            ])
+                        }
+                    ])
+    }});
+    assert_eq!(parse_insert_query(insert_query), insert_query_data);
+
 }
 
 #[test]

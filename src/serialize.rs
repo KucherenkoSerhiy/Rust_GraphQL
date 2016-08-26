@@ -103,23 +103,22 @@ impl Serializer {
         mysql_select
     }
 
-    pub fn perform_add_mutation(&self, db_name: String, insert_structure : &(String, Vec<(String, String)> )) -> String{
-        let last_column = insert_structure.1.last().unwrap();
+    //pub fn perform_add_mutation(&self, db_name: String, insert_structure : &(String, Vec<(String, String)> )) -> String{
+    pub fn perform_add_mutation(&self, db_name: String, insert_structure : &def::Mutation_Object) -> String{
+        let last_column = insert_structure.attrs.as_ref().unwrap().last().unwrap();
 
-        let mut mysql_insert: String = "INSERT INTO ".to_string() + &db_name + "." + &insert_structure.0 + "(";
+        let mut mysql_insert: String = "INSERT INTO ".to_string() + &db_name + "." + &insert_structure.name + "(\n    ";
         /*COLUMNS*/
-        for col in &insert_structure.1{
-            mysql_insert = mysql_insert + &col.0;
-            if col.0 != last_column.0 {mysql_insert = mysql_insert + ","};
+        for col in insert_structure.attrs.as_ref().unwrap(){
+            mysql_insert = mysql_insert + col.name.as_str();
+            if col.name != last_column.name {mysql_insert = mysql_insert + ","};
             mysql_insert = mysql_insert + " ";
         }
 
-        mysql_insert = mysql_insert + ")\n" +
-
-            "VALUES (";
-        for col in &insert_structure.1{
-            mysql_insert = mysql_insert + "\"" + &col.1 + "\"";;
-            if col.1 != last_column.1 {mysql_insert = mysql_insert + ","};
+        mysql_insert = mysql_insert + ")\n" + "VALUES (\n    ";
+        for col in insert_structure.attrs.as_ref().unwrap(){
+            mysql_insert = mysql_insert + "\"" + col.value.as_ref().unwrap().as_str() + "\"";;
+            if col.value.as_ref().unwrap() != last_column.value.as_ref().unwrap() {mysql_insert = mysql_insert + ","};
             mysql_insert = mysql_insert + " ";
         }
         mysql_insert = mysql_insert + ");";
