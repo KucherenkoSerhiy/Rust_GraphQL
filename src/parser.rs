@@ -470,17 +470,19 @@ fn test_insert_parser_function(){
             id: 1
             name: Luke
             friends {
-                Human {
+                Human (
                     id: 2
                     name: Leia
-                }
-                Human {
+                )
+                Human (
                     id: 3
                     name: Han
-                }
+                )
             }
         }
     }"[..];
+
+
     insert_query_data = IResult::Done(&b""[..], {MutationObject {
         name: "Human".to_string(),
         value: None,
@@ -506,40 +508,14 @@ fn test_insert_parser_function(){
                                 MutationObject {
                                     name: "Human".to_string(),
                                     value: None,
-                                    params: None,
-                                    attrs: Some(vec![
-                                        MutationObject {
-                                            name: "id".to_string(),
-                                            value: Some("2".to_string()),
-                                            params: None,
-                                            attrs: None
-                                        },
-                                        MutationObject {
-                                            name: "name".to_string(),
-                                            value: Some("Leia".to_string()),
-                                            params: None,
-                                            attrs: None
-                                        }
-                                    ])
+                                    params: Some(vec![("id".to_string(), "2".to_string()), ("name".to_string(), "Leia".to_string())]),
+                                    attrs: None
                                 },
                                 MutationObject {
                                     name: "Human".to_string(),
                                     value: None,
-                                    params: None,
-                                    attrs: Some(vec![
-                                        MutationObject {
-                                            name: "id".to_string(),
-                                            value: Some("3".to_string()),
-                                            params: None,
-                                            attrs: None
-                                        },
-                                        MutationObject {
-                                            name: "name".to_string(),
-                                            value: Some("Han".to_string()),
-                                            params: None,
-                                            attrs: None
-                                        }
-                                    ])
+                                    params: Some(vec![("id".to_string(), "3".to_string()), ("name".to_string(), "Han".to_string())]),
+                                    attrs: None
                                 }
                             ])
                         }
