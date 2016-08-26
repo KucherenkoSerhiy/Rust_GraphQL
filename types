@@ -10,7 +10,6 @@ type Droid {
   name: varchar(12)
   age: int
   primaryFunction: varchar(20)
-  created: date
 }
 
 type Controller {

@@ -346,7 +346,6 @@ fn test_db_creation_and_CRUD () {
             name: R2D2
             age: 4
             primaryFunction: Mechanic
-            created: 2012-01-01
         }
     }
     ";
@@ -357,7 +356,6 @@ fn test_db_creation_and_CRUD () {
             name
             age
             primaryFunction
-            created
         }
     }";
     let update_droid_query =
