@@ -16,17 +16,11 @@ extern crate env_logger;
 
 
 use rust_sql::graphql_pool::*;
-use rust_sql::parser::*;
-
-//use mio::{Token, EventLoop};
 
 use eventual::*;
 
 use mysql as my;
 
-//use std::fs::File;
-//use std::path::Path;
-use std::io::prelude::*;
 use std::str;
 use std::str::FromStr;
 use std::vec::Vec;
@@ -53,8 +47,8 @@ fn test_mysql_module(){
         account_name: Option<String>,
     }
 
-    let MYSQL_CONNECTION = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
-    let pool = my::Pool::new(MYSQL_CONNECTION.as_str()).unwrap(); //mysql://username:password@host:port
+    let mysql_connection = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
+    let pool = my::Pool::new(mysql_connection.as_str()).unwrap(); //mysql://username:password@host:port
     let mut conn = pool.get_conn().unwrap();
     //conn.query("DROP DATABASE IF EXISTS ".to_string() + DB_NAME).unwrap();
     conn.query("CREATE DATABASE IF NOT EXISTS ".to_string() + DB_NAME).unwrap();
@@ -262,10 +256,10 @@ fn test_db_creation () {
 */
 
 #[test]
-fn test_db_creation_and_CRUD () {
-    let MYSQL_CONNECTION = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
+fn test_db_creation_and_crud () {
+    let mysql_connection = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
     let mut graph_ql_pool = GraphQLPool::new(
-        MYSQL_CONNECTION.as_str(),
+        mysql_connection.as_str(),
         DB_NAME,
         &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
     );
@@ -316,15 +310,6 @@ fn test_db_creation_and_CRUD () {
             "{\n  \"data\": {\n    \"name\": \"Luke\"\n    \"homePlanet\": \"Char\"\n  }\n}"
         );*/
     });
-
-    let get_humans_query =
-    "
-    {
-        Human {
-            name
-            homePlanet
-        }
-    }";
 
     let future = graph_ql_pool.get(get_human_query);
     future.receive(move |data| {
