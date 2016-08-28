@@ -368,7 +368,7 @@ fn test_db_creation_and_crud () {
     //graph_ql_pool.delete(delete_droid_query);
 
 */
-    /*
+/*
     let create_controller_query =
     "{
         Controller {
@@ -384,7 +384,7 @@ fn test_db_creation_and_crud () {
         }
     }";
     graph_ql_pool.add(create_controller_query);
-    */
+*/
 
     let get_controller_query =
     "{

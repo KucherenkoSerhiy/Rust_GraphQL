@@ -63,9 +63,9 @@ impl Serializer {
                     panic!("Error: Unexpected column type");
                 }
             }
-                else {
+            else {
                 load_table_query = load_table_query + ",
-            "+ &column.name + " "+ &column.db_type;
+                "+ &column.name + " "+ &column.db_type + if column.is_mandatory {" NOT NULL"} else {""};
             }
 
         };

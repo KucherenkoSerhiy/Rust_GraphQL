@@ -38,22 +38,24 @@ named!(parse_param <&[u8],(String,String)>,
   )
 );
 
-named!(parse_field <&[u8],(String,String)>,
+named!(parse_field <&[u8],(String,String, bool)>,
   chain!(
     key: map_res!(alphanumeric, str::from_utf8) ~
          space?                            ~
          tag!(":")                         ~
          space?                            ~
     val: map_res!(
-           take_until_either!("\n}"),
+           take_until_either!(" !\n}"),
            str::from_utf8
          )                                 ~
+         space?                            ~
+    option: tag!("!")?                     ~
          multispace?                       ,
-    ||{(key.to_string(), val.to_string())}
+    ||{(key.to_string(), val.to_string(), if option == None {false} else {true})}
   )
 );
 
-named!(parse_object_attributes <&[u8], Vec<(String,String)> >,
+named!(parse_object_attributes <&[u8], Vec<(String,String,bool)> >,
     delimited!(
         char!('{'),
         many0!(chain!(
@@ -65,7 +67,7 @@ named!(parse_object_attributes <&[u8], Vec<(String,String)> >,
     )
 );
 
-named!(parse_object <(String, Vec<(String, String)>)>,
+named!(parse_object <(String, Vec<(String, String, bool)>)>,
     chain!(
         tag!("type")                         ~
         space                                ~
@@ -76,7 +78,7 @@ named!(parse_object <(String, Vec<(String, String)>)>,
     )
 );
 
-named! (pub parse_all_objects <&[u8], Vec <(String, Vec<(String, String)>)> >,
+named! (pub parse_all_objects <&[u8], Vec <(String, Vec<(String, String, bool)>)> >,
     many0!(chain!(
         multispace?                          ~
         result: parse_object                 ~
@@ -271,29 +273,29 @@ fn test_internal_parser_functions(){
     );
 
     assert_eq!(
-        parse_field(&b"id : String
+        parse_field(&b"id : String!
                     "[..]),
-        IResult::Done(&b""[..], {("id".to_string(), "String".to_string())})
+        IResult::Done(&b""[..], {("id".to_string(), "String".to_string(), true)})
     );
 
 
     assert_eq!(
         parse_field(&b"id:'1'
                     "[..]),
-        IResult::Done(&b""[..], {("id".to_string(), "\'1\'".to_string())})
+        IResult::Done(&b""[..], {("id".to_string(), "\'1\'".to_string(), false)})
     );
 
     assert_eq!(
         parse_field(&b"id:[Object]
                     "[..]),
-        IResult::Done(&b""[..], {("id".to_string(), "[Object]".to_string())})
+        IResult::Done(&b""[..], {("id".to_string(), "[Object]".to_string(), false)})
     );
 
     let cols = IResult::Done(&b""[..], vec![
-        {("id".to_string(), "String".to_string())},
-        {("name".to_string(), "String".to_string())},
-        {("homePlanet".to_string(), "String".to_string())},
-        {("list".to_string(), "[String]".to_string())}
+        {("id".to_string(), "String".to_string(), false)},
+        {("name".to_string(), "String".to_string(), false)},
+        {("homePlanet".to_string(), "String".to_string(), false)},
+        {("list".to_string(), "[String]".to_string(), false)}
     ]);
     assert_eq!(
         parse_object_attributes(&b"{
@@ -309,9 +311,9 @@ fn test_internal_parser_functions(){
         &b""[..],
         ("Human".to_string(),
          vec![
-            {("id".to_string(), "String".to_string())},
-            {("name".to_string(), "String".to_string())},
-            {("homePlanet".to_string(), "String".to_string())}
+            {("id".to_string(), "String".to_string(), false)},
+            {("name".to_string(), "String".to_string(), false)},
+            {("homePlanet".to_string(), "String".to_string(), false)}
         ])
     );
     assert_eq!(

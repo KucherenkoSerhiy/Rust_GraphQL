@@ -5,7 +5,8 @@ use mysql;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DbColumn {
     pub name: String,
-    pub db_type: String
+    pub db_type: String,
+    pub is_mandatory: bool
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

@@ -14,24 +14,23 @@ Built wuth Cargo. There are some tests for functionalities.
 - Connection and authentication in MySQL database
 - GraphQL Type definition:
   * Define a type
-  * Define attributes (however they have MySQL typization, not GraphQL yet)
+  * Define attributes
+  * The exclamation (!) sign in GraphQL API
+  * Define relationships between types
+  * Define relationships in the same type
 - Queries:
   * Execute queries (it has the CRUD manner so far)
+  * Querying of related objects
 - Asynchronous API:
   * Futures from eventual
   * Connection Pooling: although there's only 1 connection that executes queries.
 
 **What doesn't work**:
 - Type definition:
-  * The exclamation (!) sign in GraphQL API
-  * Primary key definition
-  * Defined types are GraphQL (actually MySQL)
-  * Define relationships between types
-  * Define relationships in the same type
   * Enum definition
 - Queries:
   * Mutations return affected objects
-  * Relations
+  * Mutation of related objects
 - Error treatment
 - ...
 

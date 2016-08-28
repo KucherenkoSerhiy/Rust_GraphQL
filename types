@@ -1,16 +1,16 @@
 type Human {
-  name: text
-  homePlanet: text
+  name: String!
+  homePlanet: String
   friends: [Human]
 }
 
 type Droid {
-  name: varchar(12)
-  age: int
-  primaryFunction: varchar(20)
+  name: String
+  age: Number
+  primaryFunction: String
 }
 
 type Controller {
-  name: text(2048)
+  name: String
   controls: [Droid]
 }

@@ -23,18 +23,11 @@ use std::io::prelude::*;
 use nom::IResult;
 
 fn graphql_to_mysql_type (attr_type: String) -> String {
-    match attr_type{
-        _ => attr_type
-        /*
-        "Number" => "INT",
-        "String" => "TEXT(2048)",
-        "Boolean" => "BOOLEAN",
-        "Array" => "text",
-        "Value" => ,
-        "Object" => ,
-        "Whitespace" => ,
-        "null" =>
-        */
+    match attr_type.as_str(){
+        "Number" => "INT".to_string(),
+        "String" => "TEXT(2048)".to_string(),
+        "Boolean" => "BOOLEAN".to_string(),
+        _ => attr_type.to_string()
     }
 }
 
@@ -58,7 +51,7 @@ pub fn extract_database_from_file (path_name: &str) -> Vec<DbTable> {
             for table in tables {
                 let mut columns: Vec<DbColumn> = Vec::new();
                 for column in table.1 {
-                    columns.push(DbColumn { name: column.0.to_string(), db_type: graphql_to_mysql_type(column.1.to_string()) });
+                    columns.push(DbColumn { name: column.0.to_string(), db_type: graphql_to_mysql_type(column.1.to_string()), is_mandatory: column.2});
                 }
                 db.push(DbTable{ name: table.0.to_string(), columns:columns })
             }
