@@ -254,17 +254,23 @@ fn test_db_creation () {
 
 
 fn create_weapons(graph_ql_pool: &mut GraphQLPool){
-    graph_ql_pool.add(" { Weapon { name: Sword } }");
     graph_ql_pool.add(" { Weapon { name: Bow } }");
     graph_ql_pool.add(" { Weapon { name: Spear } }");
+    graph_ql_pool.add(" { Weapon { name: Sword } }");
     graph_ql_pool.add(" { Weapon { name: Axe } }");
 }
 
 fn create_warriors(graph_ql_pool: &mut GraphQLPool){
     for i in 1..11{
         graph_ql_pool.add((" { Warrior { name: elf".to_string()+&i.to_string()+" race: Elf strength: 50 } }").as_str());
+    }
+    for i in 1..11{
         graph_ql_pool.add((" { Warrior { name: human".to_string()+&i.to_string()+" race: Human strength: 50 } }").as_str());
+    }
+    for i in 1..11{
         graph_ql_pool.add((" { Warrior { name: orc".to_string()+&i.to_string()+" race: Orc strength: 50 } }").as_str());
+    }
+    for i in 1..11{
         graph_ql_pool.add((" { Warrior { name: uruk".to_string()+&i.to_string()+" race: Uruk strength: 50 } }").as_str());
     }
 }
@@ -276,6 +282,40 @@ fn create_leaders(graph_ql_pool: &mut GraphQLPool){
     graph_ql_pool.add(" { Leader { name: Saruman wisdom: 50 } }");
 }
 
+fn create_relations(graph_ql_pool: &mut GraphQLPool){
+    //alliances
+    graph_ql_pool.mysql_query("INSERT INTO Leader_allies_Leader (origin_id, target_id) VALUES (1,2);");
+    graph_ql_pool.mysql_query("INSERT INTO Leader_allies_Leader (origin_id, target_id) VALUES (3,4);");
+
+    //leadership
+    for elf_id in 1..11{
+        graph_ql_pool.mysql_query(&("INSERT INTO Leader_leads_Warrior (origin_id, target_id) VALUES (1,".to_string()+&elf_id.to_string()+");"));
+    }
+    for human_id in 11..21{
+        graph_ql_pool.mysql_query(&("INSERT INTO Leader_leads_Warrior (origin_id, target_id) VALUES (2,".to_string()+&human_id.to_string()+");"));
+    }
+    for orc_id in 21..31{
+        graph_ql_pool.mysql_query(&("INSERT INTO Leader_leads_Warrior (origin_id, target_id) VALUES (3,".to_string()+&orc_id.to_string()+");"));
+    }
+    for uruk_id in 31..41{
+        graph_ql_pool.mysql_query(&("INSERT INTO Leader_leads_Warrior (origin_id, target_id) VALUES (4,".to_string()+&uruk_id.to_string()+");"));
+    }
+
+    //weapons
+    for elf_id in 1..11{
+        graph_ql_pool.mysql_query(&("INSERT INTO Warrior_wears_Weapon (origin_id, target_id) VALUES (".to_string()+&elf_id.to_string()+",1);"));
+    }
+    for human_id in 11..21{
+        graph_ql_pool.mysql_query(&("INSERT INTO Warrior_wears_Weapon (origin_id, target_id) VALUES (".to_string()+&human_id.to_string()+",2);"));
+    }
+    for orc_id in 21..31{
+        graph_ql_pool.mysql_query(&("INSERT INTO Warrior_wears_Weapon (origin_id, target_id) VALUES (".to_string()+&orc_id.to_string()+",3);"));
+    }
+    for uruk_id in 31..41{
+        graph_ql_pool.mysql_query(&("INSERT INTO Warrior_wears_Weapon (origin_id, target_id) VALUES (".to_string()+&uruk_id.to_string()+",4);"));
+    }
+}
+
 #[test]
 fn test_db_creation_and_crud () {
     let mysql_connection = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
@@ -285,16 +325,17 @@ fn test_db_creation_and_crud () {
         &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
     );
 
-    //create_weapons(&mut graph_ql_pool);
-    //create_warriors(&mut graph_ql_pool);
-    //create_leaders(&mut graph_ql_pool);
+    create_weapons(&mut graph_ql_pool);
+    create_warriors(&mut graph_ql_pool);
+    create_leaders(&mut graph_ql_pool);
 
-    graph_ql_pool.destroy_database();
+    create_relations(&mut graph_ql_pool);
 
-    //make this thread sleep to give time for event loop thread to process
+    //graph_ql_pool.destroy_database();
     thread::sleep_ms(10000);
 
-/*
+
+    /*
     let get_human_query =
     "{
         Human (id:\"1\"){
