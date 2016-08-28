@@ -1,16 +1,17 @@
-type Human {
+type Leader {
   name: String!
-  homePlanet: String
-  friends: [Human]
+  wisdom: Number
+  allies: [Leader]
+  leads:[Warrior]
 }
 
-type Droid {
-  name: String
-  age: Number
-  primaryFunction: String
+type Warrior {
+  name: String!
+  race: String
+  strength: Number
+  wears: [Weapon]
 }
 
-type Controller {
-  name: String
-  controls: [Droid]
+type Weapon {
+  name: String!
 }

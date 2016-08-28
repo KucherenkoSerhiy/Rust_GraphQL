@@ -93,8 +93,6 @@ impl Handler for ConnectionPool {
 
     fn notify(&mut self, event_loop: &mut EventLoop<ConnectionPool>, msg: GraphqlMsg) {
         self.request_messages.push(msg);
-        //self.ready(event_loop, SERVER_TOKEN, EventSet::writable());
-
     }
 
     fn ready(&mut self,
@@ -106,7 +104,6 @@ impl Handler for ConnectionPool {
         match token {
             // A read event for our `Server` token means we are establishing a new connection.
             SERVER_TOKEN => {
-                //println!("ConnectionPool::ready: got a server token");
                 let client_socket = match self.socket.accept() {
                     Err(e) => {
                         println!("Accept error: {}", e);
@@ -128,16 +125,13 @@ impl Handler for ConnectionPool {
                 let mut connection = self.connections.get_mut(token).unwrap();
                 //we're getting response
                 if events.is_readable() {
-                    //println!("ConnectionPool::ready: ready to read from client");
                     self.response_messages.append(&mut connection.get_responses());
                     event_loop.reregister(&connection.socket, connection.token, EventSet::writable(),
                                           PollOpt::edge() | PollOpt::oneshot()).unwrap();
                 }
                 if events.is_writable(){
-                    //println!("ConnectionPool::ready: ready to write to client");
                     if !self.request_messages.is_empty(){
                         //write request to the client and reregister it to readable.
-                        //println!("ConnectionPool::ready: have a message");
                         connection.push_request(self.request_messages.remove(0));
                         connection.process();
                         event_loop.reregister(&connection.socket, connection.token, EventSet::readable(),

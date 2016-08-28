@@ -83,18 +83,30 @@ impl GraphQLPool {
         future
     }
 
-    pub fn delete (&mut self, query: &str) -> Future<String, ()> {
+    pub fn delete (&mut self, query: &str) {
         let (tx, future) = Future::<String, ()>::pair();
         self.sender.send(GraphqlMsg::Request{
             operation: "delete".to_string(),
             body: query.to_string(),
             tx: tx
         }).unwrap();
-        future
+    }
+
+    pub fn mysql_query (&mut self, query: &str) {
+        let (tx, future) = Future::<String, ()>::pair();
+        self.sender.send(GraphqlMsg::Request{
+            operation: "query".to_string(),
+            body: query.to_string(),
+            tx: tx
+        }).unwrap();
     }
 
     pub fn destroy_database (&mut self){
-        //let mut conn = self.pool.get_conn().unwrap();
-        //conn.query(serialize::destroy_database((&self.working_database_name).to_string())).unwrap();
+        let (tx, future) = Future::<String, ()>::pair();
+        self.sender.send(GraphqlMsg::Request{
+            operation: "destroy_db".to_string(),
+            body: "".to_string(),
+            tx: tx
+        }).unwrap();
     }
 }

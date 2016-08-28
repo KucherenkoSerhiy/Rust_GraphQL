@@ -16,20 +16,17 @@ extern crate env_logger;
 
 
 use rust_sql::graphql_pool::*;
-
 use eventual::*;
-
 use mysql as my;
-
 use std::str;
 use std::str::FromStr;
 use std::vec::Vec;
 use std::option::Option;
-
+use std::thread;
 use nom::{IResult,digit};
 use nom::IResult::*;
 
-const DB_NAME: &'static str = "serhiy_db";
+const DB_NAME: &'static str = "lotr_db";
 const DB_USER: &'static str = "root";
 const DB_PASSWORD: &'static str = "root";
 const HOST: &'static str = "localhost";
@@ -255,6 +252,30 @@ fn test_db_creation () {
 }
 */
 
+
+fn create_weapons(graph_ql_pool: &mut GraphQLPool){
+    graph_ql_pool.add(" { Weapon { name: Sword } }");
+    graph_ql_pool.add(" { Weapon { name: Bow } }");
+    graph_ql_pool.add(" { Weapon { name: Spear } }");
+    graph_ql_pool.add(" { Weapon { name: Axe } }");
+}
+
+fn create_warriors(graph_ql_pool: &mut GraphQLPool){
+    for i in 1..11{
+        graph_ql_pool.add((" { Warrior { name: elf".to_string()+&i.to_string()+" race: Elf strength: 50 } }").as_str());
+        graph_ql_pool.add((" { Warrior { name: human".to_string()+&i.to_string()+" race: Human strength: 50 } }").as_str());
+        graph_ql_pool.add((" { Warrior { name: orc".to_string()+&i.to_string()+" race: Orc strength: 50 } }").as_str());
+        graph_ql_pool.add((" { Warrior { name: uruk".to_string()+&i.to_string()+" race: Uruk strength: 50 } }").as_str());
+    }
+}
+
+fn create_leaders(graph_ql_pool: &mut GraphQLPool){
+    graph_ql_pool.add(" { Leader { name: Galadriel wisdom: 50 } }");
+    graph_ql_pool.add(" { Leader { name: Aragorn wisdom: 50 } }");
+    graph_ql_pool.add(" { Leader { name: Sauron wisdom: 50 } }");
+    graph_ql_pool.add(" { Leader { name: Saruman wisdom: 50 } }");
+}
+
 #[test]
 fn test_db_creation_and_crud () {
     let mysql_connection = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
@@ -263,6 +284,16 @@ fn test_db_creation_and_crud () {
         DB_NAME,
         &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
     );
+
+    //create_weapons(&mut graph_ql_pool);
+    //create_warriors(&mut graph_ql_pool);
+    //create_leaders(&mut graph_ql_pool);
+
+    graph_ql_pool.destroy_database();
+
+    //make this thread sleep to give time for event loop thread to process
+    thread::sleep_ms(10000);
+
 /*
     let get_human_query =
     "{
@@ -385,7 +416,7 @@ fn test_db_creation_and_crud () {
     }";
     graph_ql_pool.add(create_controller_query);
 */
-
+/*
     let get_controller_query =
     "{
         Controller (id:\"8\"){
@@ -397,6 +428,5 @@ fn test_db_creation_and_crud () {
         }
     }";
     graph_ql_pool.get(get_controller_query);
-    //graph_ql_pool.destroy_database();
-
+*/
 }

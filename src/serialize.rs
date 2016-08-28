@@ -227,7 +227,7 @@ impl Serializer {
         mysql_insert = mysql_insert + "\n);\n";
 
         mysql_insert = mysql_insert + mysql_insert_rels.as_str();
-        println!("\n\n\n\n\n{}\n\n\n\n\n", mysql_insert);
+        //println!("\n\n\n\n\n{}\n\n\n\n\n", mysql_insert);
         //got the id from origin
         let last_insert_id = conn.query(&mysql_insert).unwrap().last_insert_id();
 

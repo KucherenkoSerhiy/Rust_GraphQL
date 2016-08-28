@@ -75,6 +75,12 @@ impl Connection {
                         "delete" => {
                             self.delete(&body)
                         },
+                        "query" => {
+                            self.process_mysql_query(&body)
+                        },
+                        "destroy_db" => {
+                            self.destroy_database()
+                        },
                         _ => panic!("Error: Wrong operation type")
                     };
                     self.response_messages.push(GraphqlMsg::Response{body: response_body.clone()});
@@ -168,5 +174,17 @@ impl Connection {
             IResult::Incomplete (_) => unimplemented!()
         }
         "delete response completed".to_string()
+    }
+
+    pub fn process_mysql_query (&mut self, query: &str) -> String {
+        let mut conn = self.target.pool.get_conn().unwrap();
+        conn.query(query).unwrap();
+        "query executed".to_string()
+    }
+
+    pub fn destroy_database (&mut self) -> String {
+        let mut conn = self.target.pool.get_conn().unwrap();
+        conn.query("DROP DATABASE ".to_string() + (&self.target.working_database_name) + ";").unwrap();
+        "database dropped".to_string()
     }
 }
