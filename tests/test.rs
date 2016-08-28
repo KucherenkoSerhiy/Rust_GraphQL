@@ -273,7 +273,7 @@ fn test_db_creation_and_crud () {
     }";
     graph_ql_pool.get(get_human_query)
 */
-
+/*
     //HUMANS
     let add_human_query =
     "
@@ -367,7 +367,8 @@ fn test_db_creation_and_crud () {
 
     //graph_ql_pool.delete(delete_droid_query);
 
-
+*/
+    /*
     let create_controller_query =
     "{
         Controller {
@@ -383,6 +384,19 @@ fn test_db_creation_and_crud () {
         }
     }";
     graph_ql_pool.add(create_controller_query);
+    */
+
+    let get_controller_query =
+    "{
+        Controller (id:\"8\"){
+            name
+            controls {
+                name
+                age
+            }
+        }
+    }";
+    graph_ql_pool.get(get_controller_query);
     //graph_ql_pool.destroy_database();
 
 }
