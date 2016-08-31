@@ -90,13 +90,13 @@ impl Serializer {
             let last_param = select_structure.params.as_ref().unwrap().last().unwrap();
             mysql_select = mysql_select + "WHERE ";
             for parameter in parameters {
-                mysql_select = mysql_select + &parameter.0 + "=" + &parameter.1;
+                mysql_select = mysql_select + &parameter.0 + "=\"" + &parameter.1 + "\"";
                 if parameter != last_param {mysql_select = mysql_select + " AND";}
                 mysql_select = mysql_select + " ";
             };
         }
         mysql_select = mysql_select + ";";
-
+        //println!("mysql_select: {}", mysql_select);
         mysql_select
     }
 
@@ -134,7 +134,9 @@ impl Serializer {
 
         mysql_select_rels
     }
+/*
 
+*/
     pub fn perform_get(&self, db_name: String, select_structure : &def::QueryObject) -> String{
         let mut last_column_name = "".to_string();
         for col in select_structure.attrs.as_ref().unwrap(){
@@ -157,7 +159,7 @@ impl Serializer {
             let last_param = select_structure.params.as_ref().unwrap().last().unwrap();
             mysql_select = mysql_select + "WHERE ";
             for parameter in parameters {
-                mysql_select = mysql_select + &parameter.0 + "=" + &parameter.1;
+                mysql_select = mysql_select + &parameter.0 + "=\"" + &parameter.1 + "\"";
                 if parameter != last_param {mysql_select = mysql_select + " AND";}
                 mysql_select = mysql_select + " ";
             };
@@ -252,7 +254,7 @@ impl Serializer {
             let last_param = update_structure.params.as_ref().unwrap().last().unwrap();
             mysql_update = mysql_update + "WHERE ";
             for parameter in parameters {
-                mysql_update = mysql_update + &parameter.0 + "=" + &parameter.1;
+                mysql_update = mysql_update + &parameter.0 + "=\"" + &parameter.1 + "\"";
                 if parameter != last_param {mysql_update = mysql_update + " AND";}
                 mysql_update = mysql_update + " ";
             };
@@ -269,7 +271,7 @@ impl Serializer {
             let last_param = delete_structure.params.as_ref().unwrap().last().unwrap();
             mysql_delete = mysql_delete + "WHERE ";
             for parameter in parameters {
-                mysql_delete = mysql_delete + &parameter.0 + "=" + &parameter.1;
+                mysql_delete = mysql_delete + &parameter.0 + "=\"" + &parameter.1 + "\"";
                 if parameter != last_param {mysql_delete = mysql_delete + " AND";}
                 mysql_delete = mysql_delete + " ";
             };

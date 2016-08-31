@@ -331,143 +331,188 @@ fn test_db_creation_and_crud () {
 
     create_relations(&mut graph_ql_pool);
 
-    //graph_ql_pool.destroy_database();
+
     thread::sleep_ms(10000);
 
 
-    /*
-    let get_human_query =
+
+    let get_weapons_query =
     "{
-        Human (id:\"1\"){
+        Weapon{
             name
-            homePlanet
-        }
-    }";
-    graph_ql_pool.get(get_human_query)
-*/
-/*
-    //HUMANS
-    let add_human_query =
-    "
-    {
-        Human {
-            name: Luke
-            homePlanet: Char
         }
     }";
 
-    let get_human_query =
-    "
-    {
-        Human (id:\"1\"){
-            name
-            homePlanet
-        }
-    }";
+    let mut future = graph_ql_pool.get(get_weapons_query);
 
-    graph_ql_pool.add(add_human_query);
-
-    let future = graph_ql_pool.get(get_human_query);
-    future.receive(move |data| {
-        let result = match data {
-            Ok(res) => res,
-            Err(err) => {
-                panic!("Error: {:?}",err);
-                return;
-            },
-        };
-        /*assert_eq!(
-            result,
-            "{\n  \"data\": {\n    \"name\": \"Luke\"\n    \"homePlanet\": \"Char\"\n  }\n}"
-        );*/
-    });
-
-    let future = graph_ql_pool.get(get_human_query);
-    future.receive(move |data| {
-        let result = match data {
-            Ok(res) => res,
-            Err(err) => {
-                panic!("Error: {:?}",err);
-                return;
-            },
-        };
-    });
-
-    //DROIDS
-    let add_droid_query =
-    "
-    {
-        Droid {
-            id: 1
-            name: R2D2
-            age: 4
-            primaryFunction: Mechanic
-        }
-    }
-    ";
-
-    let get_droid_query =
+    let get_warrior_query =
     "{
-        Droid (id:\"1\"){
+        Warrior (id: 8){
             name
-            age
-            primaryFunction
-        }
-    }";
-    let update_droid_query =
-    "
-    {
-        Droid (id:1) {
-            age: 4
-        }
-    }
-    ";
-    let delete_droid_query =
-    "
-    {
-        Droid (id:\"1\")
-    }
-    ";
-
-    //graph_ql_pool.add(add_droid_query);
-    //let mut selected_droid = graph_ql_pool.get(get_droid_query);
-    //println!("TEST {}", selected_droid);
-
-    //graph_ql_pool.update(update_droid_query);
-    //selected_droid = graph_ql_pool.get(get_droid_query);
-    //println!("TEST {}", selected_droid);
-
-    //graph_ql_pool.delete(delete_droid_query);
-
-*/
-/*
-    let create_controller_query =
-    "{
-        Controller {
-            name: Queen
-            controls {
-                Droid (
-                    \"id\": 1
-                )
-                Droid (
-                    name: R2D2
-                )
-            }
-        }
-    }";
-    graph_ql_pool.add(create_controller_query);
-*/
-/*
-    let get_controller_query =
-    "{
-        Controller (id:\"8\"){
-            name
-            controls {
+            race
+            wears {
                 name
-                age
             }
         }
     }";
-    graph_ql_pool.get(get_controller_query);
-*/
+
+    future = graph_ql_pool.get(get_warrior_query);
+    future.receive(move |data| {
+        let result = match data {
+            Ok(res) => res,
+            Err(err) => {
+                panic!("Error: {:?}",err);
+                return;
+            },
+        };
+        assert_eq!(
+            result,
+            "{\n\t\"data\": {\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'elf8\',\n\t\t\t\"race\": \'Elf\',\n\t\t\t\"wears\": [  \n\t\t\t\t{\n\t\t\t\t\t\"name\": \'Bow\'\n\t\t\t\t}\n\t\t\t]\n\t\t}\n\t}\n}\n"
+        );
+    });
+
+    let get_warriors_query =
+    "{
+        Warrior (race: \"Human\"){
+            name
+        }
+    }";
+
+    future = graph_ql_pool.get(get_warriors_query);
+    future.receive(move |data| {
+        let result = match data {
+            Ok(res) => res,
+            Err(err) => {
+                panic!("Error: {:?}",err);
+                return;
+            },
+        };
+        assert_eq!(
+            result,
+            "{\n\t\"data\": {\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human1\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human2\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human3\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human4\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human5\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human6\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human7\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human8\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human9\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human10\'\n\t\t}\n\t}\n}\n"
+        );
+    });
+
+    let get_leader_and_his_warriors_query =
+    "{
+        Leader (id: 1){
+            name
+            wisdom
+            leads {
+                name
+            }
+        }
+    }";
+
+    future = graph_ql_pool.get(get_leader_and_his_warriors_query);
+    future.receive(move |data| {
+        let result = match data {
+            Ok(res) => res,
+            Err(err) => {
+                panic!("Error: {:?}",err);
+                return;
+            },
+        };
+        assert_eq!(
+            result,
+            "{\n\t\"data\": {\n\t\t\"Leader\": {\n\t\t\t\"name\": \'Galadriel\',\n\t\t\t\"wisdom\": 50,\n\t\t\t\"leads\": [  \n\t\t\t\t{\n\t\t\t\t\t\"name\": \'elf1\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'elf2\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'elf3\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'elf4\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'elf5\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'elf6\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'elf7\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'elf8\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'elf9\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'elf10\'\n\t\t\t\t}\n\t\t\t]\n\t\t}\n\t}\n}\n"
+        );
+    });
+
+    let update_leader_query = "{
+        Leader (id:3) {
+            wisdom: 75
+        }
+    }";
+
+    graph_ql_pool.update(update_leader_query);
+
+    let get_Sauron_query =
+    "{
+        Leader (id: 3){
+            name
+            wisdom
+        }
+    }";
+
+    future = graph_ql_pool.get(get_Sauron_query);
+    future.receive(move |data| {
+        let result = match data {
+            Ok(res) => res,
+            Err(err) => {
+                panic!("Error: {:?}",err);
+                return;
+            },
+        };
+        assert_eq!(
+            result,
+            "{\n\t\"data\": {\n\t\t\"Leader\": {\n\t\t\t\"name\": \'Sauron\',\n\t\t\t\"wisdom\": 75\n\t\t}\n\t}\n}\n"
+        );
+    });
+
+    let delete_warrior_query = "{
+        Warrior (id:22)
+    }";
+
+    graph_ql_pool.delete(delete_warrior_query);
+
+    let get_leader_and_his_warriors_query =
+    "{
+        Leader (id: 3){
+            name
+            wisdom
+            leads {
+                name
+            }
+        }
+    }";
+
+    future = graph_ql_pool.get(get_leader_and_his_warriors_query);
+    future.receive(move |data| {
+        let result = match data {
+            Ok(res) => res,
+            Err(err) => {
+                panic!("Error: {:?}",err);
+                return;
+            },
+        };
+        assert_eq!(
+            result,
+            "{\n\t\"data\": {\n\t\t\"Leader\": {\n\t\t\t\"name\": \'Sauron\',\n\t\t\t\"wisdom\": 75,\n\t\t\t\"leads\": [  \n\t\t\t\t{\n\t\t\t\t\t\"name\": \'orc1\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'orc3\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'orc4\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'orc5\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'orc6\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'orc7\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'orc8\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'orc9\'\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"name\": \'orc10\'\n\t\t\t\t}\n\t\t\t]\n\t\t}\n\t}\n}\n"
+        );
+    });
+
+    let delete_weapons_query = "{
+        Weapon
+    }";
+
+    graph_ql_pool.delete(delete_weapons_query);
+
+    let get_warriors_query =
+    "{
+        Warrior (id: 11){
+            name
+            strength
+            wears {
+                name
+            }
+        }
+    }";
+
+    future = graph_ql_pool.get(get_warriors_query);
+    future.receive(move |data| {
+        let result = match data {
+            Ok(res) => res,
+            Err(err) => {
+                panic!("Error: {:?}",err);
+                return;
+            },
+        };
+        assert_eq!(
+            result,
+            "{\n\t\"data\": {\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human1\',\n\t\t\t\"strength\": 50,\n\t\t\t\"wears\": [ \n\t\t\t]\n\t\t}\n\t}\n}\n"
+        );
+    });
+
+    thread::sleep_ms(4000);
 }
