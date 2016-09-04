@@ -87,58 +87,6 @@ named! (pub parse_all_objects <&[u8], Vec <(String, Vec<(String, String, bool)>)
     ))
 );
 
-/*
-WILL BE USED TO PARSE EVERYTHING (Tables, Relations, Enums) IN THE FILE
-named! (pub parse_file <&[u8], Vec <(String, Vec<(String, String)>)> >,
-    chain!(
-        tbl: parse_all_objects,
-        ||{tbl}
-    )
-);
-*/
-
-
-
-
-/*
-mutation {
-  delete  (id: 1234) {
-    status
-  }
-}
-*/
-/*
-named!(parse_query_type <&[u8], Option<&[u8]> >,
-    chain!(
-        operation: tag!("mutation")? ~
-        multispace?,
-        ||{operation}
-    )
-);
-
-named!(parse_mutation_type <&[u8], Option<&[u8]> >,
-    chain!(
-        mutation_type: alt!(tag!("abcd") | tag!("efgh")) ~
-        space?,
-        ||{mutation_type}
-    )
-);
-*/
-
-/*
-{
-    user (id:1) {
-        name
-        phone
-    }
-}
-{
-    Human (id:"1"){
-        name
-        homePlanet
-    }
-}
-*/
 named! (parse_query_object <&[u8], QueryObject>,
     chain!(
         multispace?                      ~
@@ -411,7 +359,6 @@ fn test_insert_parser_function(){
             homePlanet: Char
         }
     }"[..];
-    //let mut insert_query_data = IResult::Done(&b""[..], {("Human".to_string(), vec![{("id".to_string(), "1".to_string())}, {("name".to_string(), "Luke".to_string())}, {("homePlanet".to_string(), "Char".to_string())}])});
     let mut insert_query_data = IResult::Done(&b""[..], {MutationObject {
         name: "Human".to_string(),
         value: None,

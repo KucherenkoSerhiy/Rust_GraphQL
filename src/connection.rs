@@ -60,8 +60,6 @@ impl Connection {
             let msg = self.request_messages.remove(0);
             match msg {
                 GraphqlMsg::Request{operation, body, tx} => {
-                    //println!("Operation {}", operation);
-                    //println!("{}", body);
                     let response_body = match operation.as_str(){
                         "add" => {
                             self.add(&body)
@@ -100,11 +98,9 @@ impl Connection {
     }
 
     pub fn get (&mut self, query: &str) -> String {
-        //println!("Graph_QL_Pool::get:\n{}\n---------------------------", query);
         let select_query_data = parser::parse_query(query.as_bytes());
         match select_query_data{
             IResult::Done(_, select_structure) => {
-                //println!("get structure: {:?}", select_structure);
                 let mysql_select_origin_ids = self.serializer.perform_get_ids((&self.target.working_database_name).to_string(), &select_structure);
                 let origin_ids : Vec<i32> = self.deserializer.perform_get_ids(&self.target.pool, mysql_select_origin_ids);
 
@@ -114,63 +110,48 @@ impl Connection {
                 self.deserializer.perform_get(&self.target.pool, mysql_select, mysql_select_rels, &select_structure)
             },
             IResult::Error (cause) => panic!("Graph_QL_Pool::get::Error: {}", cause),
-            //IResult::Incomplete (size) => unimplemented!()
             IResult::Incomplete (_) => unimplemented!()
         }
     }
 
     pub fn add (&mut self, query: &str) -> String {
-        //println!("Graph_QL_Pool::add:\n{}\n---------------------------", query);
         let insert_query_data = parser::parse_mutation_query(query.as_bytes());
         match insert_query_data{
-            //IResult::Done(input, insert_structure) => {
             IResult::Done(_, insert_structure) => {
 
                 let mut conn = self.target.pool.get_conn().unwrap();
                 self.serializer.perform_add_mutation(&mut conn, (&self.target.working_database_name).to_string(), &insert_structure);
             },
-            //IResult::Error (cause) => unimplemented!(),
             IResult::Error (_) => unimplemented!(),
-            //IResult::Incomplete (size) => unimplemented!()
             IResult::Incomplete (_) => unimplemented!()
         }
         "add response completed".to_string()
     }
 
     pub fn update (&mut self, query: &str) -> String {
-        //println!("Graph_QL_Pool::update:\n{}\n---------------------------", query);
         let update_query_data = parser::parse_mutation_query(query.as_bytes());
         match update_query_data{
-            //IResult::Done(input, update_structure) => {
             IResult::Done(_, update_structure) => {
                 let mysql_update: String = self.serializer.perform_update_mutation((&self.target.working_database_name).to_string(), &update_structure);
 
-                //println!("parsed");
                 let mut conn = self.target.pool.get_conn().unwrap();
                 conn.query(&mysql_update).unwrap();
             },
-            //IResult::Error (cause) => unimplemented!(),
             IResult::Error (_) => unimplemented!(),
-            //IResult::Incomplete (size) => unimplemented!()
             IResult::Incomplete (_) => unimplemented!()
         }
         "update response completed".to_string()
     }
 
     pub fn delete (&mut self, query: &str) -> String {
-        //println!("Graph_QL_Pool::delete:\n{}\n---------------------------", query);
         let delete_query_data = parser::parse_mutation_query(query.as_bytes());
         match delete_query_data{
-            //IResult::Done(input, delete_structure) => {
             IResult::Done(_, delete_structure) => {
                 let mysql_delete: String = self.serializer.perform_delete_mutation((&self.target.working_database_name).to_string(), &delete_structure);
-                //println!("parsed");
                 let mut conn = self.target.pool.get_conn().unwrap();
                 conn.query(&mysql_delete).unwrap();
             },
-            //IResult::Error (cause) => unimplemented!(),
             IResult::Error (_) => unimplemented!(),
-            //IResult::Incomplete (size) => unimplemented!()
             IResult::Incomplete (_) => unimplemented!()
         }
         "delete response completed".to_string()

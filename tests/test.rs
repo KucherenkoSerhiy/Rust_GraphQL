@@ -187,33 +187,6 @@ fn test_nom_module(){
     assert_eq!(r, Done(&b"\nijklmnopqrstuvwxyz"[..], &b"abcdefgh"[..]));
 }
 
-/*
-const SERVER: Token = Token(0);
-const CLIENT: Token = Token(1);
-
-#[test]
-fn test_mio_module () {
-        debug!("Starting TEST_ECHO_SERVER");
-        let mut event_loop = EventLoop::new().unwrap();
-
-        let addr = localhost();
-        let srv = TcpListener::bind(&addr).unwrap();
-
-        info!("listen for connections");
-        event_loop.register(&srv, SERVER, EventSet::readable(),
-                            PollOpt::edge() | PollOpt::oneshot()).unwrap();
-
-        let sock = TcpStream::connect(&addr).unwrap();
-
-        // Connect to the server
-        event_loop.register(&sock, CLIENT, EventSet::writable(),
-                            PollOpt::edge() | PollOpt::oneshot()).unwrap();
-
-        // Start the event loop
-        event_loop.run(&mut Echo::new(srv, sock, vec!["foo", "bar"])).unwrap();
-}
-*/
-
 #[test]
 fn test_eventual () {
     // Run a computation in another thread
@@ -237,21 +210,6 @@ fn test_eventual () {
 
     assert_eq!(61, res);
 }
-
-/*
-#[test]
-fn test_db_creation () {
-    let MYSQL_CONNECTION = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
-    let mut graph_ql_pool = GraphQLPool::new(
-        MYSQL_CONNECTION.as_str(),
-        DB_NAME,
-        &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
-    );
-
-    graph_ql_pool.destroy();
-}
-*/
-
 
 fn create_weapons(graph_ql_pool: &mut GraphQLPool){
     graph_ql_pool.add(" { Weapon { name: Bow } }");
@@ -324,16 +282,13 @@ fn test_db_creation_and_crud () {
         DB_NAME,
         &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
     );
-
+/*
     create_weapons(&mut graph_ql_pool);
     create_warriors(&mut graph_ql_pool);
     create_leaders(&mut graph_ql_pool);
-
     create_relations(&mut graph_ql_pool);
-
-
     thread::sleep_ms(10000);
-
+*/
 
 
     let get_weapons_query =
@@ -514,5 +469,5 @@ fn test_db_creation_and_crud () {
         );
     });
 
-    thread::sleep_ms(4000);
+    thread::sleep_ms(10000);
 }

@@ -49,9 +49,7 @@ impl Deserializer {
     fn perform_get_relations(&mut self, pool: &mysql::Pool, query_relations: String, select_structure : &def::QueryObject ) -> String{
         let mut json = "".to_string();
 
-        println!("HELLO HERE query_relations: {}", query_relations);
         let mut query_result = pool.prep_exec(query_relations, ()).unwrap();
-        println!("HELLO THERE");
 
         for col in select_structure.attrs.as_ref().unwrap(){
             if col.attrs.as_ref() != None {
@@ -94,9 +92,7 @@ impl Deserializer {
         json = json + &(self.get_tabulation()) + "\"data\": {" + &(self.endline());
         self.add_tabbing();
 
-        println!("HELLO HERE query_objects: {}", query_objects);
         let mut query_result = pool.prep_exec(query_objects, ()).unwrap();
-        println!("HELLO THERE");
 
         for result in query_result.by_ref() {
             let mut row = result.unwrap();
@@ -129,7 +125,6 @@ impl Deserializer {
         self.remove_tabbing();
         json = json + &(self.get_tabulation()) + "}" + &(self.endline());
 
-        //println!("\n\n\n\n\n{}\n\n\n\n\n", json);
         json
     }
 }

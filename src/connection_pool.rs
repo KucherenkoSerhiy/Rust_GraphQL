@@ -79,7 +79,6 @@ impl ConnectionPool {
         println!("[ConnectionPool::find_connection_by_token]");
         if !self.connections.is_empty() {
             let conn = Ok(self.connections.get_mut(token).unwrap());
-            //println!("Connection with {:?} -> {:?}",token,conn );
             return conn;
         }
         Err("There is no connection found")

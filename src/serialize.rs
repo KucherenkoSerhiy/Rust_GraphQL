@@ -96,7 +96,6 @@ impl Serializer {
             };
         }
         mysql_select = mysql_select + ";";
-        //println!("mysql_select: {}", mysql_select);
         mysql_select
     }
 
@@ -105,7 +104,6 @@ impl Serializer {
         let mut mysql_select_cols: String = "".to_string();
 
         for col in select_structure.attrs.as_ref().unwrap(){
-            //println!("GOTCHA: {:?}", col);
             if let Some(attributes) = col.attrs.as_ref() {
                 for attribute in attributes {
                     mysql_select_cols = mysql_select_cols + "target." + attribute.name.as_str() + ", ";
@@ -130,13 +128,10 @@ impl Serializer {
             }
         }
 
-        //println!("\n\nmysql_select_rels:\n{}\n\n", mysql_select_rels);
 
         mysql_select_rels
     }
-/*
 
-*/
     pub fn perform_get(&self, db_name: String, select_structure : &def::QueryObject) -> String{
         let mut last_column_name = "".to_string();
         for col in select_structure.attrs.as_ref().unwrap(){
@@ -166,7 +161,6 @@ impl Serializer {
         }
         mysql_select = mysql_select + ";";
 
-        //println!("\n\n mysql_select: \n{}\n\n", mysql_select);
         mysql_select
     }
 
@@ -229,15 +223,11 @@ impl Serializer {
         mysql_insert = mysql_insert + "\n);\n";
 
         mysql_insert = mysql_insert + mysql_insert_rels.as_str();
-        //println!("\n\n\n\n\n{}\n\n\n\n\n", mysql_insert);
         //got the id from origin
         let last_insert_id = conn.query(&mysql_insert).unwrap().last_insert_id();
 
-        //got the id from targets
+        //get the id from targets
 
-        //self.perform_add_rels(db_name, &insert_structure, last_insert_id);
-        //println!("last_insert_id = {}", last_insert_id);
-        //conn.query(&mysql_add_rels).unwrap().affected_rows();
     }
 
     pub fn perform_update_mutation(&self, db_name: String, update_structure : &def::MutationObject) -> String{
