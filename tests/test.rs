@@ -217,7 +217,6 @@ fn create_weapons(graph_ql_pool: &mut GraphQLPool){
     graph_ql_pool.add(" { Weapon { name: Sword } }");
     graph_ql_pool.add(" { Weapon { name: Axe } }");
 }
-
 fn create_warriors(graph_ql_pool: &mut GraphQLPool){
     for i in 1..11{
         graph_ql_pool.add((" { Warrior { name: elf".to_string()+&i.to_string()+" race: Elf strength: 50 } }").as_str());
@@ -232,14 +231,12 @@ fn create_warriors(graph_ql_pool: &mut GraphQLPool){
         graph_ql_pool.add((" { Warrior { name: uruk".to_string()+&i.to_string()+" race: Uruk strength: 50 } }").as_str());
     }
 }
-
 fn create_leaders(graph_ql_pool: &mut GraphQLPool){
     graph_ql_pool.add(" { Leader { name: Galadriel wisdom: 50 } }");
     graph_ql_pool.add(" { Leader { name: Aragorn wisdom: 50 } }");
     graph_ql_pool.add(" { Leader { name: Sauron wisdom: 50 } }");
     graph_ql_pool.add(" { Leader { name: Saruman wisdom: 50 } }");
 }
-
 fn create_relations(graph_ql_pool: &mut GraphQLPool){
     //alliances
     graph_ql_pool.mysql_query("INSERT INTO Leader_allies_Leader (origin_id, target_id) VALUES (1,2);");
@@ -274,22 +271,7 @@ fn create_relations(graph_ql_pool: &mut GraphQLPool){
     }
 }
 
-#[test]
-fn test_db_creation_and_crud () {
-    let mysql_connection = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
-    let mut graph_ql_pool = GraphQLPool::new(
-        mysql_connection.as_str(),
-        DB_NAME,
-        &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
-    );
-/*
-    create_weapons(&mut graph_ql_pool);
-    create_warriors(&mut graph_ql_pool);
-    create_leaders(&mut graph_ql_pool);
-    create_relations(&mut graph_ql_pool);
-    thread::sleep_ms(10000);
-*/
-
+fn test_queries (graph_ql_pool: &mut GraphQLPool){
 
     let get_weapons_query =
     "{
@@ -344,7 +326,7 @@ fn test_db_creation_and_crud () {
         };
         assert_eq!(
             result,
-            "{\n\t\"data\": {\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human1\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human2\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human3\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human4\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human5\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human6\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human7\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human8\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human9\'\n\t\t}\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human10\'\n\t\t}\n\t}\n}\n"
+            "{\n\t\"data\": {\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human1\'\n\t\t},\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human2\'\n\t\t},\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human3\'\n\t\t},\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human4\'\n\t\t},\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human5\'\n\t\t},\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human6\'\n\t\t},\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human7\'\n\t\t},\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human8\'\n\t\t},\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human9\'\n\t\t},\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human10\'\n\t\t}\n\t}\n}\n"
         );
     });
 
@@ -468,6 +450,23 @@ fn test_db_creation_and_crud () {
             "{\n\t\"data\": {\n\t\t\"Warrior\": {\n\t\t\t\"name\": \'human1\',\n\t\t\t\"strength\": 50,\n\t\t\t\"wears\": [ \n\t\t\t]\n\t\t}\n\t}\n}\n"
         );
     });
+}
 
+#[test]
+fn test_db_creation_and_crud () {
+    let mysql_connection = "mysql://".to_string()+DB_USER+":"+DB_PASSWORD+"@"+HOST+":"+PORT;
+    let mut graph_ql_pool = GraphQLPool::new(
+        mysql_connection.as_str(),
+        DB_NAME,
+        &(FILE_LOCATION.to_string()+"/"+FILE_NAME)
+    );
+
+    create_weapons(&mut graph_ql_pool);
+    create_warriors(&mut graph_ql_pool);
+    create_leaders(&mut graph_ql_pool);
+    create_relations(&mut graph_ql_pool);
+    thread::sleep_ms(10000);
+
+    test_queries(&mut graph_ql_pool);
     thread::sleep_ms(10000);
 }

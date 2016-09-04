@@ -114,10 +114,11 @@ impl Deserializer {
             self.remove_tabbing();
             resulting_object = resulting_object + &(self.get_tabulation()) + "}," + &(self.endline());
             json = json + resulting_object.as_str();
-            json.pop();
-            json.pop();
-            json = json + &(self.endline());
+
         };
+        json.pop();
+        json.pop();
+        json = json + &(self.endline());
 
         self.remove_tabbing();
         json = json + &(self.get_tabulation()) + "}" + &(self.endline());
